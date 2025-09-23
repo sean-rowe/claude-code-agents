@@ -52,7 +52,7 @@ cd .claude-agents-mcp
 npm install
 ```
 
-2. **Create `.idea/copilot-mcp.json` in your project:**
+2. **Create `.idea/mcp.json` in your project:**
 ```json
 {
   "mcpServers": {
@@ -69,7 +69,7 @@ npm install
 
 ### Method 3: Using NPX (No Installation)
 
-Create `.idea/copilot-mcp.json` in your project:
+Create `.idea/mcp.json` in your project:
 ```json
 {
   "mcpServers": {
@@ -86,8 +86,8 @@ Create `.idea/copilot-mcp.json` in your project:
 
 ## Rider Configuration Files
 
-### Option A: User-Level Configuration
-**Location:** `~/.config/JetBrains/Rider2024.3/copilot-mcp.json`
+### Option A: User-Level Configuration (Recommended)
+**Location:** `~/.config/github-copilot/intellij/mcp.json`
 
 ```json
 {
@@ -105,7 +105,7 @@ Create `.idea/copilot-mcp.json` in your project:
 ```
 
 ### Option B: Project-Level Configuration
-**Location:** `{YourProject}/.idea/copilot-mcp.json`
+**Location:** `{YourProject}/.idea/mcp.json`
 
 ```json
 {
@@ -131,18 +131,17 @@ Save this as `setup-rider.sh`:
 # Claude Code Agents MCP Setup for Rider
 echo "Setting up Claude Code Agents for JetBrains Rider..."
 
-# Get Rider config directory
-RIDER_VERSION=$(ls ~/.config/JetBrains/ | grep -E "^Rider" | sort -V | tail -n1)
-RIDER_CONFIG_DIR="$HOME/.config/JetBrains/$RIDER_VERSION"
+# Get GitHub Copilot config directory for JetBrains IDEs
+COPILOT_CONFIG_DIR="$HOME/.config/github-copilot/intellij"
 
 # Create config directory if it doesn't exist
-mkdir -p "$RIDER_CONFIG_DIR"
+mkdir -p "$COPILOT_CONFIG_DIR"
 
 # Path to this script's directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Create the MCP configuration
-cat > "$RIDER_CONFIG_DIR/copilot-mcp.json" << EOF
+cat > "$COPILOT_CONFIG_DIR/mcp.json" << EOF
 {
   "mcpServers": {
     "claude-code-agents": {
@@ -162,7 +161,7 @@ cd "$SCRIPT_DIR"
 npm install
 
 echo "✅ Setup complete!"
-echo "📍 Configuration saved to: $RIDER_CONFIG_DIR/copilot-mcp.json"
+echo "📍 Configuration saved to: $COPILOT_CONFIG_DIR/mcp.json"
 echo "🔄 Please restart Rider for changes to take effect"
 ```
 
@@ -220,22 +219,18 @@ chmod +x /Users/srowe/projects/claude-code-agents/copilot-mcp/index.js
 2. **Check JSON syntax:**
 ```bash
 # Validate JSON
-python3 -m json.tool < ~/.config/JetBrains/Rider*/copilot-mcp.json
+python3 -m json.tool < ~/.config/github-copilot/intellij/mcp.json
 ```
 
 ## Platform-Specific Paths
 
-### macOS
-- User config: `~/.config/JetBrains/Rider{version}/copilot-mcp.json`
-- Alternative: `~/Library/Application Support/JetBrains/Rider{version}/copilot-mcp.json`
+### All Platforms (GitHub Copilot for JetBrains)
+- User config: `~/.config/github-copilot/intellij/mcp.json`
+- Project config: `{project}/.idea/mcp.json`
 
 ### Windows
-- User config: `%APPDATA%\JetBrains\Rider{version}\copilot-mcp.json`
-- Alternative: `%LOCALAPPDATA%\JetBrains\Rider{version}\copilot-mcp.json`
-
-### Linux
-- User config: `~/.config/JetBrains/Rider{version}/copilot-mcp.json`
-- Alternative: `~/.local/share/JetBrains/Rider{version}/copilot-mcp.json`
+- User config: `%USERPROFILE%\.config\github-copilot\intellij\mcp.json`
+- Project config: `{project}\.idea\mcp.json`
 
 ## Using Agents in Rider
 

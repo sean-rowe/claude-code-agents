@@ -23,35 +23,24 @@ echo "Detected OS: $OS"
 # Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Find Rider configuration directory based on OS
-find_rider_config() {
+# Find GitHub Copilot configuration directory for JetBrains IDEs
+find_copilot_config() {
     local config_dir=""
 
-    if [[ "$OS" == "macos" ]]; then
-        # Try new location first
-        if ls ~/.config/JetBrains/Rider* 2>/dev/null | head -n1 > /dev/null; then
-            config_dir=$(ls -d ~/.config/JetBrains/Rider* 2>/dev/null | sort -V | tail -n1)
-        # Try legacy location
-        elif ls ~/Library/Application\ Support/JetBrains/Rider* 2>/dev/null | head -n1 > /dev/null; then
-            config_dir=$(ls -d ~/Library/Application\ Support/JetBrains/Rider* 2>/dev/null | sort -V | tail -n1)
-        fi
-    elif [[ "$OS" == "linux" ]]; then
-        if ls ~/.config/JetBrains/Rider* 2>/dev/null | head -n1 > /dev/null; then
-            config_dir=$(ls -d ~/.config/JetBrains/Rider* 2>/dev/null | sort -V | tail -n1)
-        elif ls ~/.local/share/JetBrains/Rider* 2>/dev/null | head -n1 > /dev/null; then
-            config_dir=$(ls -d ~/.local/share/JetBrains/Rider* 2>/dev/null | sort -V | tail -n1)
-        fi
+    # GitHub Copilot uses a unified location for all JetBrains IDEs
+    if [[ "$OS" == "macos" || "$OS" == "linux" ]]; then
+        config_dir="$HOME/.config/github-copilot/intellij"
     elif [[ "$OS" == "windows" ]]; then
         # Windows paths need special handling
-        echo "⚠️  Windows detected. Please manually configure Rider."
-        echo "Add configuration to: %APPDATA%\\JetBrains\\Rider*\\copilot-mcp.json"
+        echo "⚠️  Windows detected. Please manually configure."
+        echo "Add configuration to: %USERPROFILE%\\.config\\github-copilot\\intellij\\mcp.json"
         return 1
     fi
 
-    if [[ -z "$config_dir" ]]; then
-        echo "❌ Could not find Rider configuration directory"
-        echo "Please ensure Rider is installed and has been run at least once"
-        return 1
+    # Create directory if it doesn't exist
+    if [[ ! -d "$config_dir" ]]; then
+        echo "📁 Creating GitHub Copilot config directory..."
+        mkdir -p "$config_dir"
     fi
 
     echo "$config_dir"
@@ -91,7 +80,7 @@ install_dependencies() {
 # Create MCP configuration
 create_config() {
     local config_dir="$1"
-    local config_file="$config_dir/copilot-mcp.json"
+    local config_file="$config_dir/mcp.json"
 
     echo "📝 Creating MCP configuration..."
 
@@ -127,14 +116,14 @@ main() {
     check_node
 
     echo ""
-    echo "🔍 Finding Rider configuration directory..."
-    RIDER_CONFIG=$(find_rider_config)
+    echo "🔍 Finding GitHub Copilot configuration directory..."
+    COPILOT_CONFIG=$(find_copilot_config)
 
     if [[ $? -ne 0 ]]; then
         echo ""
         echo "📋 Manual Configuration Required"
         echo "================================"
-        echo "1. Create copilot-mcp.json in your Rider config directory"
+        echo "1. Create mcp.json in ~/.config/github-copilot/intellij/"
         echo "2. Add this configuration:"
         echo ""
         echo '{'
@@ -152,13 +141,13 @@ main() {
         exit 1
     fi
 
-    echo "Found: $RIDER_CONFIG"
+    echo "Found: $COPILOT_CONFIG"
 
     echo ""
     install_dependencies
 
     echo ""
-    create_config "$RIDER_CONFIG"
+    create_config "$COPILOT_CONFIG"
 
     # Make index.js executable
     chmod +x "$SCRIPT_DIR/index.js"
