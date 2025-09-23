@@ -1,0 +1,29 @@
+{
+  "name": "claude-code-agents-copilot-mcp",
+  "version": "1.0.0",
+  "description": "GitHub Copilot MCP integration for Claude Code Agents",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "github-copilot",
+    "claude-code-agents",
+    "tdd",
+    "bdd",
+    "ddd",
+    "agile"
+  ],
+  "author": "Claude Code Agents",
+  "license": "MIT"
+}

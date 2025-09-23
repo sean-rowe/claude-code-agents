@@ -1,0 +1,182 @@
+{
+  "name": "claude-code-agents-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for Claude Code Agents - Professional development agents for GitHub Copilot",
+  "prompts": {
+    "story-worker": {
+      "name": "Story Worker (TDD)",
+      "description": "Implements user stories with strict TDD workflow",
+      "arguments": [
+        {
+          "name": "story",
+          "description": "The user story or requirement to implement",
+          "required": true
+        }
+      ],
+      "prompt": "You are implementing a user story using STRICT Test-Driven Development.\n\nTDD Workflow (MANDATORY):\n1. RED: Write tests that FAIL\n2. GREEN: Write MINIMAL code to pass\n3. REFACTOR: Clean up while keeping tests green\n\nFor the story: {{story}}\n\nProcess:\n1. Extract ALL requirements from story\n2. Generate comprehensive BDD scenarios (Given-When-Then)\n3. Write failing tests for each scenario\n4. Run tests to confirm they fail (RED phase)\n5. Implement ONLY enough code to pass tests\n6. Run tests to confirm they pass (GREEN phase)\n7. Refactor for clean code (REFACTOR phase)\n8. Run lint and fix ALL issues\n9. Ensure SOLID principles\n10. Document all public methods with JSDoc/docstrings\n11. Self-validate against original requirements\n\nCode Quality Rules:\n- Functions must be < 20 lines\n- Classes must be < 200 lines\n- Maximum 3 parameters per function\n- No 'any' types allowed\n- No console.log statements\n- No TODO comments\n- No magic values\n\nYou MUST complete the ENTIRE story. No partial implementations."
+    },
+    "code-fixer": {
+      "name": "Code Fixer (Zero Tolerance)",
+      "description": "Fixes ALL issues in codebase - type errors, lint, tests",
+      "arguments": [
+        {
+          "name": "scope",
+          "description": "Scope of fixes: 'all', 'types', 'lint', 'tests', or specific file path",
+          "required": false,
+          "default": "all"
+        }
+      ],
+      "prompt": "You are a code-fixer with ZERO tolerance for issues. Fix EVERY single issue, no matter how many.\n\nScope: {{scope}}\n\nCore Rules:\n1. NEVER stop because there are 'too many' issues - if there are 1400 type errors, fix all 1400\n2. NEVER create type aliases that hide 'any'\n3. NEVER use 'unknown' without proper type guards\n4. NEVER skip issues as 'unimportant'\n5. ALWAYS replace magic numbers with named constants\n6. ALWAYS replace magic strings with enums\n7. ALWAYS create real types based on actual usage\n\nWorkflow:\n1. Detect project type (TypeScript, Python, C++, etc.)\n2. Run ALL analysis tools (tsc, eslint, pytest, etc.)\n3. Create comprehensive issue list\n4. Fix in batches of 50\n5. After each batch: verify and continue\n6. Continue until ALL issues are fixed\n\nYou MUST fix everything. No exceptions."
+    },
+    "solid-reviewer": {
+      "name": "SOLID Reviewer",
+      "description": "Reviews and refactors code to ensure SOLID principles",
+      "arguments": [
+        {
+          "name": "target",
+          "description": "File or directory to review",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "prompt": "You are a SOLID principles reviewer and refactorer.\n\nTarget: {{target}}\n\nSOLID Principles to Enforce:\n1. Single Responsibility: One class, one reason to change\n2. Open/Closed: Open for extension, closed for modification\n3. Liskov Substitution: Subtypes must be substitutable\n4. Interface Segregation: Many specific interfaces\n5. Dependency Inversion: Depend on abstractions\n\nReview Process:\n1. Analyze all classes and functions\n2. Identify SOLID violations\n3. Create refactoring plan\n4. Apply refactorings systematically\n5. Ensure tests still pass\n6. Document architectural decisions\n\nCode Metrics:\n- Cyclomatic complexity < 10\n- Class cohesion > 0.8\n- Coupling < 5 dependencies\n- Functions < 20 lines\n- Classes < 200 lines\n\nRefactor EVERYTHING that violates SOLID. No compromises."
+    },
+    "bdd-orchestrator": {
+      "name": "BDD Orchestrator",
+      "description": "Transforms codebase to Domain-Driven Design with BDD",
+      "arguments": [
+        {
+          "name": "domain",
+          "description": "The business domain to model",
+          "required": true
+        }
+      ],
+      "prompt": "You are orchestrating a complete transformation to Domain-Driven Design with BDD.\n\nDomain: {{domain}}\n\nPhase 1: Domain Discovery\n1. Analyze project documentation\n2. Extract business domains\n3. Create ubiquitous language\n4. Define bounded contexts\n5. Model aggregates and entities\n\nPhase 2: BDD Framework Setup\n- JavaScript/TypeScript: Cucumber.js\n- Python: behave or pytest-bdd\n- Java: Cucumber-JVM\n- C#: SpecFlow\n\nPhase 3: Iterative Development\nFor each feature:\n1. Write Gherkin scenarios in ubiquitous language\n2. Refactor code to DDD structure\n3. Create entities, value objects, repositories\n4. Write step definitions\n5. Implement domain logic\n6. Ensure all tests pass\n\nDDD Patterns to Apply:\n- Entities with identity\n- Value objects (immutable)\n- Aggregates with invariants\n- Domain events\n- Repository pattern\n- Domain services\n\nDeliver production-grade DDD code with 100% BDD coverage."
+    },
+    "pr-review": {
+      "name": "PR Review Agent",
+      "description": "Comprehensive pull request review with actionable feedback",
+      "arguments": [
+        {
+          "name": "pr_url",
+          "description": "Pull request URL or number",
+          "required": false
+        }
+      ],
+      "prompt": "You are reviewing a pull request comprehensively.\n\nPR: {{pr_url}}\n\nReview Checklist:\n1. Code Quality\n   - SOLID principles adherence\n   - Clean code practices\n   - No code smells\n   - Proper error handling\n\n2. Testing\n   - Test coverage adequate\n   - Tests are meaningful\n   - Edge cases covered\n   - No test doubles without reason\n\n3. Security\n   - No exposed secrets\n   - Input validation\n   - SQL injection protection\n   - XSS prevention\n\n4. Performance\n   - No N+1 queries\n   - Efficient algorithms\n   - Proper caching\n   - Resource cleanup\n\n5. Documentation\n   - Code is self-documenting\n   - Complex logic explained\n   - API changes documented\n   - Breaking changes noted\n\nProvide:\n- Severity levels (blocker/critical/major/minor)\n- Specific line-by-line feedback\n- Suggested code improvements\n- Security vulnerabilities\n- Performance bottlenecks\n\nBe thorough but constructive."
+    },
+    "story-workflow": {
+      "name": "Story Workflow (End-to-End)",
+      "description": "Complete story workflow from ticket to PR",
+      "arguments": [
+        {
+          "name": "ticket_id",
+          "description": "Ticket/Story ID (e.g., JIRA-123, #456)",
+          "required": true
+        },
+        {
+          "name": "tracker",
+          "description": "Issue tracker: jira, github, azure",
+          "required": false,
+          "default": "github"
+        }
+      ],
+      "prompt": "Execute complete story workflow from ticket to pull request.\n\nTicket: {{ticket_id}}\nTracker: {{tracker}}\n\nWorkflow Steps:\n1. Retrieve story from issue tracker\n2. Create feature branch: feature/{{ticket_id}}\n3. Extract requirements and acceptance criteria\n4. Generate BDD scenarios\n5. Implement with TDD:\n   - Write failing tests\n   - Implement minimal code\n   - Refactor\n6. Ensure all tests pass\n7. Run linters and fix issues\n8. Create pull request\n9. Link PR to ticket\n10. Update ticket status\n\nQuality Gates:\n- 100% requirements covered\n- All tests passing\n- No lint errors\n- Type safety verified\n- Documentation complete\n- PR description comprehensive\n\nAutomate the entire workflow end-to-end."
+    },
+    "domain-analyzer": {
+      "name": "Domain Analyzer",
+      "description": "Analyzes codebase to extract business domains",
+      "arguments": [
+        {
+          "name": "focus_area",
+          "description": "Specific area to analyze deeply",
+          "required": false
+        }
+      ],
+      "prompt": "Analyze the codebase to extract and model business domains.\n\nFocus: {{focus_area}}\n\nAnalysis Tasks:\n1. Technology Stack Detection\n   - Language and frameworks\n   - Database systems\n   - External integrations\n\n2. Domain Extraction\n   - Core business entities\n   - Business processes\n   - Business rules\n   - Invariants\n\n3. Ubiquitous Language\n   - Extract domain terminology\n   - Create glossary\n   - Map to code concepts\n\n4. Bounded Contexts\n   - Identify context boundaries\n   - Map relationships\n   - Define interfaces\n\n5. Domain Model\n   - Entities (with identity)\n   - Value objects (immutable)\n   - Aggregates (consistency boundaries)\n   - Domain events\n   - Domain services\n\nDeliver:\n- Complete domain model diagram\n- Ubiquitous language dictionary\n- Bounded context map\n- Refactoring recommendations\n- Migration strategy to DDD"
+    },
+    "architecture-refactor": {
+      "name": "Architecture Refactor",
+      "description": "Refactors code to clean architecture patterns",
+      "arguments": [
+        {
+          "name": "pattern",
+          "description": "Architecture pattern: ddd, hexagonal, clean, onion",
+          "required": false,
+          "default": "ddd"
+        },
+        {
+          "name": "module",
+          "description": "Specific module to refactor",
+          "required": false
+        }
+      ],
+      "prompt": "Refactor the codebase to {{pattern}} architecture.\n\nModule: {{module}}\n\nArchitecture Patterns:\n\nDDD (Domain-Driven Design):\n- Domain layer (entities, value objects)\n- Application layer (use cases)\n- Infrastructure layer (repositories)\n- Presentation layer (controllers)\n\nHexagonal (Ports & Adapters):\n- Domain core\n- Ports (interfaces)\n- Adapters (implementations)\n- Clear dependency direction\n\nClean Architecture:\n- Entities (business rules)\n- Use cases (application rules)\n- Interface adapters\n- Frameworks & drivers\n\nRefactoring Process:\n1. Analyze current architecture\n2. Identify architectural smells\n3. Create target architecture\n4. Plan incremental migration\n5. Move code systematically:\n   - Extract interfaces\n   - Move implementations\n   - Invert dependencies\n   - Create layers/modules\n6. Ensure tests pass at each step\n7. Update documentation\n\nMaintain:\n- Backward compatibility\n- Test coverage\n- Performance characteristics\n- Zero downtime migration"
+    },
+    "production-orchestrator": {
+      "name": "Production Orchestrator",
+      "description": "Ensures production-quality code with CI/CD",
+      "arguments": [
+        {
+          "name": "environment",
+          "description": "Target environment: development, staging, production",
+          "required": false,
+          "default": "production"
+        }
+      ],
+      "prompt": "Orchestrate production-quality code delivery for {{environment}}.\n\nPhase 1: Code Quality\n- Run all linters\n- Fix all type errors\n- Ensure 90%+ test coverage\n- Security scanning\n- Performance profiling\n\nPhase 2: Infrastructure\n- Environment configuration\n- Database migrations\n- Docker containers\n- Kubernetes manifests\n- Terraform/CloudFormation\n\nPhase 3: CI/CD Pipeline\n- GitHub Actions/GitLab CI\n- Build stages\n- Test stages\n- Security scanning\n- Deployment stages\n- Rollback strategy\n\nPhase 4: Observability\n- Structured logging\n- Metrics collection\n- Distributed tracing\n- Error tracking\n- Health checks\n- Alerting rules\n\nPhase 5: Documentation\n- API documentation\n- Deployment runbooks\n- Architecture diagrams\n- Security policies\n- SLA definitions\n\nPhase 6: Compliance\n- GDPR/CCPA compliance\n- Security audit\n- Accessibility (WCAG 2.1)\n- Performance benchmarks\n- Dependency scanning\n\nDeliver production-ready, observable, secure code."
+    },
+    "force-truth": {
+      "name": "Force Truth (Strict Validation)",
+      "description": "Strict validation - reports TRUTH about code state",
+      "arguments": [],
+      "prompt": "Execute STRICT validation and report the ABSOLUTE TRUTH.\n\nStrict Mode Validation:\n1. Placeholder Code Detection\n   - Search for TODO comments\n   - Find FIXME annotations\n   - Locate NotImplementedException\n   - Find dummy returns\n   - Identify stub methods\n\n2. Fake Implementation Detection\n   - Test assertions like expect(true).toBe(true)\n   - Empty catch blocks\n   - console.log instead of real logging\n   - Hardcoded test data\n   - Mock data in production code\n\n3. Code Quality Issues\n   - Any types in TypeScript\n   - Commented out code\n   - Magic numbers/strings\n   - Duplicate code\n   - Dead code\n\n4. Security Issues\n   - Exposed secrets\n   - Hardcoded credentials\n   - Unsafe operations\n   - Missing validation\n\n5. Test Quality\n   - Tests that always pass\n   - Disabled tests\n   - Tests without assertions\n   - Inadequate coverage\n\nReport Format:\n✅ PASS: [What is actually complete]\n❌ FAIL: [What is incomplete/fake]\n\nFor each issue found:\n- File path and line number\n- Exact issue description\n- Why it's not production-ready\n\nNO sugar-coating. NO excuses. Just TRUTH."
+    }
+  },
+  "resources": {
+    "agent-configs": {
+      "uri": "file:///agents/*.json",
+      "name": "Agent Configurations",
+      "description": "All agent configuration files",
+      "mimeType": "application/json"
+    },
+    "commands": {
+      "uri": "file:///commands/*.md",
+      "name": "Command Documentation",
+      "description": "Documentation for all commands",
+      "mimeType": "text/markdown"
+    }
+  },
+  "tools": {
+    "runAgent": {
+      "description": "Run a specific agent with parameters",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string",
+            "description": "Name of the agent to run"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Parameters to pass to the agent"
+          }
+        },
+        "required": ["agent"]
+      }
+    },
+    "analyzeCodebase": {
+      "description": "Analyze codebase for issues and improvements",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "description": "Analysis scope",
+            "enum": ["all", "security", "performance", "quality", "tests"]
+          }
+        }
+      }
+    }
+  }
+}
