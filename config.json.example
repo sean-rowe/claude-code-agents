@@ -1,0 +1,42 @@
+{
+  "agents": {
+    "default_timeout": 300000,
+    "auto_dispatch": true,
+    "parallel_execution": true
+  },
+  "story_workflow": {
+    "tracker": "auto",
+    "auto_merge": true,
+    "delete_branch_after_merge": true,
+    "default_reviewers": [],
+    "transition_names": {
+      "start": "In Progress",
+      "complete": "Done"
+    }
+  },
+  "quality_gates": {
+    "minimum_coverage": 90,
+    "max_complexity": 10,
+    "max_function_lines": 20,
+    "enforce_solid": true,
+    "require_bdd": true
+  },
+  "ci_cd": {
+    "platform": "github",
+    "deploy_environments": ["staging", "production"],
+    "blue_green_deployment": true,
+    "auto_rollback": true
+  },
+  "security": {
+    "scan_dependencies": true,
+    "scan_secrets": true,
+    "require_code_signing": false,
+    "owasp_compliance": true
+  },
+  "monitoring": {
+    "opentelemetry": true,
+    "structured_logging": true,
+    "error_tracking": "sentry",
+    "metrics_backend": "prometheus"
+  }
+}
