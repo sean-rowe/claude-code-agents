@@ -77,6 +77,12 @@
       "args": ["--agent", "code-reviewer"],
       "configPath": "~/.claude/agents/code-reviewer-agent.json",
       "description": "Comprehensive code review with actionable feedback"
+    },
+    "jira-setup": {
+      "command": "claude-agent",
+      "args": ["--agent", "jira-setup"],
+      "configPath": "~/.claude/agents/jira-setup-agent.json",
+      "description": "MANDATORY JIRA project setup and .env configuration"
     }
   },
   "subagents": {
@@ -131,6 +137,10 @@
     "code-reviewer": {
       "type": "general-purpose",
       "configFile": "agents/code-reviewer-agent.json"
+    },
+    "jira-setup": {
+      "type": "general-purpose",
+      "configFile": "agents/jira-setup-agent.json"
     }
   }
 }
