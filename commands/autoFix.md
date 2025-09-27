@@ -21,7 +21,7 @@ Automatically fix ALL issues found during code audit with zero manual interventi
    - C++ Project: Focus 80% on void*, C-casts, new/delete, malloc, #define
    - TypeScript: Focus 80% on 'any' types, missing annotations, || vs ??
    - Python: Focus 80% on missing type hints, bare except:
-   - Universal: TODO/FIXME, debug prints (20% effort)
+   - Universal: TODO/FIXME, "just", "for now", debug prints (20% effort)
 
 3. Parse and categorize ALL issues found
 3. **CREATE AND DISPLAY A CONCRETE PLAN:**

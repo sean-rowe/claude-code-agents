@@ -11,6 +11,7 @@ Find and fix ALL fake implementations:
    - Return null/default
    - Pass-through methods
    - Stub implementations
+   - Comments with "just" or "for now"
 
 2. IDENTIFY real behavior:
    - What should method do?
