@@ -8,34 +8,42 @@ set -e
 CLAUDE_DIR="$HOME/.claude"
 REPO_URL="https://github.com/sean-rowe/claude-code-agents.git"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Colors for output - detect if colors are supported
+if [[ -t 1 ]] && [[ $(tput colors) -ge 8 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    NC=''
+fi
 
-echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║       Claude Code Agents - Installation Script          ║${NC}"
-echo -e "${BLUE}║          Production-Ready DDD, BDD, Agile Agents        ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}"
+printf "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}\n"
+printf "${BLUE}║       Claude Code Agents - Installation Script          ║${NC}\n"
+printf "${BLUE}║          Production-Ready DDD, BDD, Agile Agents        ║${NC}\n"
+printf "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}\n"
 echo ""
 
 # Function to print colored messages
 print_step() {
-    echo -e "${GREEN}➤${NC} $1"
+    printf "${GREEN}➤${NC} %s\n" "$1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    printf "${RED}✗${NC} %s\n" "$1"
 }
 
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+    printf "${GREEN}✓${NC} %s\n" "$1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    printf "${YELLOW}⚠${NC} %s\n" "$1"
 }
 
 # Check if git is installed
@@ -122,8 +130,8 @@ fi
 
 # Display available agents
 echo ""
-echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}Available Agents:${NC}"
+printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
+printf "${GREEN}Available Agents:${NC}\n"
 echo ""
 for agent in "$CLAUDE_DIR/agents"/*.json; do
     if [ -f "$agent" ]; then
@@ -135,25 +143,25 @@ done
 
 # Display key commands
 echo ""
-echo -e "${GREEN}Key Commands:${NC}"
+printf "${GREEN}Key Commands:${NC}\n"
 echo ""
-echo "  ${YELLOW}/work-on-story [ID]${NC}      Complete workflow from ticket to merged PR"
-echo "  ${YELLOW}/production-orchestrator${NC}  Full production pipeline with quality gates"
-echo "  ${YELLOW}/ddd-orchestrator${NC}         Transform codebase to Domain-Driven Design"
-echo "  ${YELLOW}/orchestrator${NC}             Main orchestrator with auto-detection"
-echo "  ${YELLOW}/forceTruth${NC}               Verify no placeholder code exists"
-echo "  ${YELLOW}/autoFixAll${NC}               Fix all issues without stopping"
+printf "  ${YELLOW}/work-on-story [ID]${NC}      Complete workflow from ticket to merged PR\n"
+printf "  ${YELLOW}/production-orchestrator${NC}  Full production pipeline with quality gates\n"
+printf "  ${YELLOW}/ddd-orchestrator${NC}         Transform codebase to Domain-Driven Design\n"
+printf "  ${YELLOW}/orchestrator${NC}             Main orchestrator with auto-detection\n"
+printf "  ${YELLOW}/forceTruth${NC}               Verify no placeholder code exists\n"
+printf "  ${YELLOW}/autoFixAll${NC}               Fix all issues without stopping\n"
 
 # Final instructions
 echo ""
-echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}✨ Installation Complete!${NC}"
+printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
+printf "${GREEN}✨ Installation Complete!${NC}\n"
 echo ""
 echo "Next steps:"
 echo "1. Open Claude Code"
-echo "2. Try: ${YELLOW}/orchestrator${NC} to start with automatic detection"
-echo "3. Or: ${YELLOW}/work-on-story STORY-123${NC} to work on a specific story"
+printf "2. Try: ${YELLOW}/orchestrator${NC} to start with automatic detection\n"
+printf "3. Or: ${YELLOW}/work-on-story STORY-123${NC} to work on a specific story\n"
 echo ""
-echo "Documentation: ${BLUE}https://github.com/sean-rowe/claude-code-agents${NC}"
+printf "Documentation: ${BLUE}https://github.com/sean-rowe/claude-code-agents${NC}\n"
 echo ""
-echo -e "${GREEN}Happy coding! 🚀${NC}"
+printf "${GREEN}Happy coding! 🚀${NC}\n"
