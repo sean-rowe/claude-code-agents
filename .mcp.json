@@ -53,6 +53,30 @@
       "args": ["--agent", "pr-review"],
       "configPath": "~/.claude/agents/pr-review-agent.json",
       "description": "Monitors and addresses PR review comments automatically"
+    },
+    "bdd-manager": {
+      "command": "claude-agent",
+      "args": ["--agent", "bdd-manager"],
+      "configPath": "~/.claude/agents/bdd-manager-agent.json",
+      "description": "Complete BDD management with Gherkin optimization and step definitions"
+    },
+    "story-creator": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-creator"],
+      "configPath": "~/.claude/agents/story-creator-agent.json",
+      "description": "Creates JIRA stories from Gherkin with subtasks and tracking"
+    },
+    "story-implementer": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-implementer"],
+      "configPath": "~/.claude/agents/story-implementer-agent.json",
+      "description": "Implements stories with branch creation and continuous JIRA updates"
+    },
+    "code-reviewer": {
+      "command": "claude-agent",
+      "args": ["--agent", "code-reviewer"],
+      "configPath": "~/.claude/agents/code-reviewer-agent.json",
+      "description": "Comprehensive code review with actionable feedback"
     }
   },
   "subagents": {
@@ -91,6 +115,22 @@
     "pr-review": {
       "type": "general-purpose",
       "configFile": "agents/pr-review-agent.json"
+    },
+    "bdd-manager": {
+      "type": "general-purpose",
+      "configFile": "agents/bdd-manager-agent.json"
+    },
+    "story-creator": {
+      "type": "general-purpose",
+      "configFile": "agents/story-creator-agent.json"
+    },
+    "story-implementer": {
+      "type": "general-purpose",
+      "configFile": "agents/story-implementer-agent.json"
+    },
+    "code-reviewer": {
+      "type": "general-purpose",
+      "configFile": "agents/code-reviewer-agent.json"
     }
   }
 }
