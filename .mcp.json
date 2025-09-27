@@ -83,6 +83,18 @@
       "args": ["--agent", "jira-setup"],
       "configPath": "~/.claude/agents/jira-setup-agent.json",
       "description": "MANDATORY JIRA project setup and .env configuration"
+    },
+    "slack-notifier": {
+      "command": "claude-agent",
+      "args": ["--agent", "slack-notifier"],
+      "configPath": "~/.claude/agents/slack-notifier-agent.json",
+      "description": "MANDATORY Slack notifications for all agent actions"
+    },
+    "slack-reader": {
+      "command": "claude-agent",
+      "args": ["--agent", "slack-reader"],
+      "configPath": "~/.claude/agents/slack-reader-agent.json",
+      "description": "Reads Slack messages for context and history"
     }
   },
   "subagents": {
@@ -141,6 +153,14 @@
     "jira-setup": {
       "type": "general-purpose",
       "configFile": "agents/jira-setup-agent.json"
+    },
+    "slack-notifier": {
+      "type": "general-purpose",
+      "configFile": "agents/slack-notifier-agent.json"
+    },
+    "slack-reader": {
+      "type": "general-purpose",
+      "configFile": "agents/slack-reader-agent.json"
     }
   }
 }
