@@ -10,6 +10,7 @@ From this point forward:
 - CANNOT use NotImplementedException
 - CANNOT write fake test assertions
 - CANNOT leave empty catch blocks
+- CANNOT use "just" or "for now" in comments/code
 - MUST implement complete solutions
 - MUST handle all error cases
 - MUST write real, working code

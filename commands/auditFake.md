@@ -16,6 +16,7 @@ FIRST: Detect project type:
 THEN: Prioritize detection patterns based on project type:
 - TODO, FIXME, HACK, XXX comments
 - "placeholder", "fake", "dummy", "mock" (except mocking frameworks)
+- "just", "for now" (indicates temporary/incomplete implementation)
 - "hardcoded", "magic number"
 - Assert.Pass(), Assert.True(true), Assert.False(false)
 - throw new NotImplementedException
