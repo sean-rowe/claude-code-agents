@@ -1,0 +1,22 @@
+# Commit Template
+# Format: <type>(<scope>): <subject>
+#
+# Types:
+#   feat:     New feature
+#   fix:      Bug fix
+#   docs:     Documentation only
+#   style:    Formatting, missing semicolons, etc
+#   refactor: Code change that neither fixes bug nor adds feature
+#   perf:     Performance improvement
+#   test:     Adding missing tests
+#   chore:    Changes to build process or auxiliary tools
+
+{{TYPE}}({{STORY_ID}}): {{SHORT_DESCRIPTION}}
+
+{{LONG_DESCRIPTION}}
+
+{{BREAKING_CHANGES}}
+
+Closes {{STORY_ID}}
+
+Co-Authored-By: Claude <noreply@anthropic.com>

@@ -130,6 +130,42 @@ reset_state() {
     echo "✓ Pipeline state reset"
 }
 
+# Error recovery
+recover_from_error() {
+    local error_stage=$(get_state "stage")
+    local error_step=$(get_state "step")
+    local error_details="$1"
+
+    echo "❌ Error detected at $error_stage step $error_step"
+    echo "Details: $error_details"
+    echo ""
+    echo "Recovery options:"
+    echo "  /pipeline retry    - Retry current step"
+    echo "  /pipeline skip     - Skip to next step"
+    echo "  /pipeline reset    - Start over"
+    echo "  /pipeline status   - Check current state"
+
+    update_state "error" "true"
+    update_state "errorDetails" "$error_details"
+    update_state "errorStage" "$error_stage"
+    update_state "errorStep" "$error_step"
+}
+
+# Retry from error
+retry_from_error() {
+    local error_stage=$(get_state "errorStage")
+    local error_step=$(get_state "errorStep")
+
+    if [ -n "$error_stage" ] && [ "$error_stage" != "null" ]; then
+        echo "✓ Retrying $error_stage step $error_step"
+        update_state "error" "false"
+        update_state "errorDetails" ""
+        echo "Resume with: /pipeline resume"
+    else
+        echo "No error state to retry from"
+    fi
+}
+
 # Main command handler
 case "$1" in
     init)

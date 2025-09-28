@@ -5,11 +5,11 @@ Simplified agent system for Claude Code with linear pipeline execution and state
 ## Quick Start
 
 ```bash
-# Install
-./install.sh
+# One-command setup
+./quickstart.sh
 
-# Setup JIRA (if using JIRA)
-~/.claude/jira-hierarchy-setup.sh PROJ "Project Name"
+# Check system health
+/health
 
 # Start pipeline
 /pipeline requirements "Build your feature"
@@ -74,10 +74,13 @@ Pipeline state is maintained in `pipeline-state.json`:
 
 - ✅ Linear execution (no confusion)
 - ✅ State preservation (resume capability)
+- ✅ Error recovery (retry/skip/reset)
 - ✅ Rich JIRA descriptions (business value, ROI)
-- ✅ Complete TDD workflow
-- ✅ PR management
+- ✅ Complete TDD workflow with validation
+- ✅ PR management with templates
 - ✅ Clear progress indicators
+- ✅ Health check command
+- ✅ Quick start script
 
 ## Project Structure
 
