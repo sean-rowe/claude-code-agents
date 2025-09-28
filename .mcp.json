@@ -84,6 +84,12 @@
       "configPath": "~/.claude/agents/jira-setup-agent.json",
       "description": "MANDATORY JIRA project setup and .env configuration"
     },
+    "jira-clean": {
+      "command": "claude-agent",
+      "args": ["--agent", "jira-clean"],
+      "configPath": "~/.claude/agents/jira-clean-agent.json",
+      "description": "DANGEROUS - Wipes ALL issues from JIRA project"
+    },
     "slack-notifier": {
       "command": "claude-agent",
       "args": ["--agent", "slack-notifier"],
@@ -153,6 +159,10 @@
     "jira-setup": {
       "type": "general-purpose",
       "configFile": "agents/jira-setup-agent.json"
+    },
+    "jira-clean": {
+      "type": "general-purpose",
+      "configFile": "agents/jira-clean-agent.json"
     },
     "slack-notifier": {
       "type": "general-purpose",
