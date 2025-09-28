@@ -1,258 +1,133 @@
 # Claude Code Agents
 
-Production-ready Claude Code agents for Domain-Driven Design (DDD), Behavior-Driven Development (BDD), and complete agile workflow automation.
+Simplified agent system for Claude Code with linear pipeline execution and state management.
 
-## 🚀 Features
-
-- **Complete Agile Workflow**: From story retrieval to merged PR
-- **Auto-detects Tools**: JIRA (acli), GitHub (gh), Azure DevOps (az)
-- **DDD Architecture**: Automatic refactoring to Domain-Driven Design
-- **BDD Testing**: Gherkin scenarios with Cucumber/SpecFlow/behave
-- **PR Review Automation**: Auto-fixes review comments
-- **Production Pipeline**: Security, performance, accessibility checks
-- **Truth Verification**: No placeholder code or false completion claims
-
-## 📦 Installation
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/sean-rowe/claude-code-agents.git
+# Install
+./install.sh
 
-# Copy to Claude configuration
-cp -r claude-code-agents/* ~/.claude/
+# Setup JIRA (if using JIRA)
+~/.claude/jira-hierarchy-setup.sh PROJ "Project Name"
 
-# Or use specific components
-cp -r claude-code-agents/agents ~/.claude/
-cp -r claude-code-agents/commands ~/.claude/
+# Start pipeline
+/pipeline requirements "Build your feature"
+/pipeline gherkin
+/pipeline stories
+/pipeline work STORY-ID
+/pipeline complete STORY-ID
 ```
 
-## 🤖 Available Agents
+## Architecture
 
-### Core Development Agents
+### 5 Core Components
 
-| Agent | Description | Key Features |
-|-------|-------------|--------------|
-| `production-orchestrator` | Complete production pipeline | Sprint management, CI/CD, monitoring |
-| `story-workflow` | Story lifecycle management | Auto-detects tracker, creates branches, PRs |
-| `pr-review` | PR review automation | Auto-fixes tests, docs, types, errors |
-| `code-fixer` | Fix ALL code issues | Handles 1400+ errors without stopping |
-| `solid-reviewer` | SOLID principles enforcer | Clean code, <20 line functions |
+1. **Pipeline Controller** - Manages workflow stages with state
+2. **Orchestrator** - Routes requests to appropriate agents
+3. **Implementer** - Implements stories with TDD
+4. **Reviewer** - Reviews code quality
+5. **Deployer** - Handles deployment
 
-### DDD/BDD Agents
+### Pipeline Stages
 
-| Agent | Description | Key Features |
-|-------|-------------|--------------|
-| `domain-analyzer` | Extract domain models | Creates ubiquitous language |
-| `architecture-refactor` | Refactor to DDD | Entities, value objects, repositories |
-| `bdd-orchestrator` | BDD transformation | Complete DDD with BDD tests |
-| `story-worker` | Story implementation | TDD with acceptance criteria |
-| `tdd-agent` | Strict TDD enforcement | Red-Green-Refactor cycle |
-
-## 📝 Key Commands
-
-### `/work-on-story [STORY-ID]`
-Complete workflow from ticket to merged PR:
-```bash
-/work-on-story PROJ-123
 ```
-- Retrieves story from JIRA/GitHub/Azure
-- Creates feature branch
-- Implements with TDD
-- Creates and monitors PR
-- Auto-fixes review comments
-- Merges when approved
-
-### `/production-orchestrator`
-Full production pipeline with all quality gates:
-```bash
-/production-orchestrator sprint 15
-```
-- Sprint management
-- Security scanning (OWASP)
-- Performance testing (k6)
-- Accessibility (WCAG 2.1)
-- CI/CD pipeline generation
-- Observability setup
-
-### `/ddd-orchestrator`
-Transform codebase to Domain-Driven Design:
-```bash
-/ddd-orchestrator
-```
-- Analyzes domains
-- Creates ubiquitous language
-- Refactors to DDD architecture
-- Implements BDD tests
-
-### `/orchestrator`
-Main orchestrator with automatic tool detection:
-```bash
-/orchestrator
-```
-- Detects work to be done
-- Dispatches appropriate agents
-- Ensures quality standards
-- Runs `/forceTruth` at end
-
-## 🔧 Tool Detection
-
-Automatically detects and uses:
-
-| Tool | Purpose | Commands Used |
-|------|---------|---------------|
-| `acli` | JIRA integration | `acli jira issue get/transition/comment` |
-| `gh` | GitHub integration | `gh issue/pr create/view/merge` |
-| `az` | Azure DevOps | `az boards/repos work-item/pr` |
-
-## 🏗️ Architecture
-
-### Agent Structure
-```
-agents/
-├── production-orchestrator-agent.json
-├── story-workflow-agent.json
-├── pr-review-agent.json
-├── code-fixer-agent.json
-├── domain-analyzer-agent.json
-├── architecture-refactor-agent.json
-└── ...
-
-commands/
-├── work-on-story.md
-├── production-orchestrator.md
-├── ddd-orchestrator.md
-├── orchestrator.md
-└── ...
+requirements → gherkin → stories → work → complete
 ```
 
-### Configuration
+Each stage:
+- Shows clear progress (STEP: X of Y)
+- Maintains state for resume capability
+- Fails fast with clear error messages
+
+## Commands
+
+### Pipeline Commands
+- `/pipeline requirements "description"` - Generate requirements
+- `/pipeline gherkin` - Create BDD scenarios
+- `/pipeline stories` - Create JIRA hierarchy
+- `/pipeline work STORY-ID` - Implement story
+- `/pipeline complete STORY-ID` - Review and merge
+- `/pipeline status` - Check current state
+
+### Simple Commands
+- `/setup` - Initial project setup
+- `/implement STORY-ID` - Direct implementation
+- `/review` - Code review
+- `/deploy` - Deploy to production
+
+## State Management
+
+Pipeline state is maintained in `pipeline-state.json`:
+
 ```json
-// .mcp.json - MCP server configuration
 {
-  "agents": {
-    "production-orchestrator": {
-      "command": "claude-agent",
-      "args": ["--agent", "production-orchestrator"],
-      "configPath": "~/.claude/agents/production-orchestrator-agent.json"
-    }
-    // ...
-  }
+  "stage": "work",
+  "step": 4,
+  "totalSteps": 7,
+  "currentStory": "PROJ-103",
+  "nextAction": "Run tests"
 }
 ```
 
-## 🎯 Anti-Patterns Prevented
+## Features
 
-These agents prevent common issues:
+- ✅ Linear execution (no confusion)
+- ✅ State preservation (resume capability)
+- ✅ Rich JIRA descriptions (business value, ROI)
+- ✅ Complete TDD workflow
+- ✅ PR management
+- ✅ Clear progress indicators
 
-- ❌ **No placeholder code**: `// TODO: implement later`
-- ❌ **No type cheating**: `type UnknownType = any`
-- ❌ **No fake tests**: `expect(true).toBe(true)`
-- ❌ **No console.log**: In production code
-- ❌ **No magic values**: Numbers/strings without constants
-- ❌ **No stopping**: "Too many issues to handle"
-- ❌ **No excuses**: "This needs extensive refactoring"
+## Project Structure
 
-## 📊 Production Quality Gates
-
-Every story must pass:
-
-| Gate | Requirement | Enforced By |
-|------|-------------|-------------|
-| Tests | >90% coverage | `story-worker` |
-| Security | 0 high/critical | `production-orchestrator` |
-| Performance | <500ms p95 | `production-orchestrator` |
-| Accessibility | WCAG 2.1 AA | `production-orchestrator` |
-| Types | 0 errors | `code-fixer` |
-| Documentation | 100% public API | `solid-reviewer` |
-
-## 🔄 Workflow Example
-
-```bash
-# Start working on a story
-/work-on-story PROJ-123
-
-# Output:
-📋 Detected JIRA (using acli)
-📖 Retrieved story: "Add user authentication"
-🌿 Created branch: feature/PROJ-123-add-user-authentication
-✅ Updated JIRA to "In Progress"
-🧪 Writing BDD tests...
-💻 Implementing feature...
-✅ All tests passing
-🔄 Created PR #456
-🔗 Linked PR to JIRA
-👀 Monitoring reviews...
-🔧 Auto-fixing review comments...
-✅ PR approved and merged
-✅ JIRA updated to "Done"
+```
+claude-code-agents/
+├── agents/                    # 5 core agents
+│   ├── orchestrator.json
+│   ├── implementer.json
+│   ├── reviewer.json
+│   ├── deployer.json
+│   └── pipeline-controller.json
+├── commands/                  # Simplified commands
+│   ├── pipeline.md
+│   ├── setup.md
+│   ├── implement.md
+│   ├── review.md
+│   └── deploy.md
+├── pipeline-templates/        # Rich templates
+│   ├── requirements.md
+│   ├── epic-description.md
+│   └── story-description.md
+├── jira-hierarchy-setup.sh    # JIRA setup script
+├── pipeline-state-manager.sh  # State management
+├── install.sh                 # Installation script
+└── README.md                  # This file
 ```
 
-## 🚦 CI/CD Pipeline Generation
+## Improvements from Previous System
 
-Automatically generates pipelines for:
-- GitHub Actions
-- GitLab CI
-- Jenkins
-- Azure Pipelines
+| Metric | Before | After |
+|--------|--------|-------|
+| Agents | 20+ | 5 |
+| Commands | 58+ | 8 |
+| Code Lines | 7,801 | ~500 |
+| Complexity | Nested agents | Linear pipeline |
+| State | Lost frequently | Always preserved |
 
-Example generated pipeline includes:
-- Linting & type checking
-- Unit & integration tests
-- Security scanning
-- Performance testing
-- Accessibility testing
-- Blue-green deployment
-- Automatic rollback
-
-## 📈 Sprint Management
+## Installation
 
 ```bash
-/production-orchestrator sprint 15
-
-# Provides:
-- Story prioritization
-- Velocity tracking
-- Burndown charts
-- Automatic ticket updates
-- Sprint reports
+git clone https://github.com/sean-rowe/claude-code-agents.git
+cd claude-code-agents
+./install.sh
 ```
 
-## 🔒 Security Features
+## Documentation
 
-- OWASP dependency scanning
-- SQL injection prevention
-- XSS protection testing
-- Secret scanning
-- GDPR/CCPA compliance checks
-- Input validation verification
+- Quick Start: `PIPELINE_QUICK_START.md`
+- Templates: `pipeline-templates/`
 
-## 📚 Documentation
-
-All agents automatically generate:
-- API documentation (OpenAPI/Swagger)
-- Architecture diagrams (C4 model)
-- Database schemas
-- Deployment guides
-- Changelog from commits
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add your agent/command
-4. Test thoroughly
-5. Submit a PR
-
-## 📄 License
+## License
 
 MIT
-
-## 🙏 Acknowledgments
-
-Built with Claude Code and Anthropic's AI assistance.
-
----
-
-**Remember**: These agents enforce TRUTH. They will report exactly what was done, not what they claim was done. No placeholder code, no false completions.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)

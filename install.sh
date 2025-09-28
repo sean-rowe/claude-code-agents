@@ -90,6 +90,12 @@ print_step "Installing commands..."
 cp -r "$TEMP_DIR/commands" "$CLAUDE_DIR/"
 print_success "Installed $(ls -1 $TEMP_DIR/commands/*.md | wc -l) commands"
 
+print_step "Installing pipeline components..."
+[ -f "$TEMP_DIR/pipeline-state-manager.sh" ] && cp "$TEMP_DIR/pipeline-state-manager.sh" "$CLAUDE_DIR/" && chmod +x "$CLAUDE_DIR/pipeline-state-manager.sh"
+[ -d "$TEMP_DIR/pipeline-templates" ] && cp -r "$TEMP_DIR/pipeline-templates" "$CLAUDE_DIR/"
+[ -f "$TEMP_DIR/jira-hierarchy-setup.sh" ] && cp "$TEMP_DIR/jira-hierarchy-setup.sh" "$CLAUDE_DIR/" && chmod +x "$CLAUDE_DIR/jira-hierarchy-setup.sh"
+print_success "Pipeline components installed"
+
 print_step "Installing configuration files..."
 cp "$TEMP_DIR/.mcp.json" "$CLAUDE_DIR/"
 [ -f "$TEMP_DIR/config.json" ] && cp "$TEMP_DIR/config.json" "$CLAUDE_DIR/"

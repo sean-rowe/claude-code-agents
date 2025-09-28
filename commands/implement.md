@@ -1,28 +1,33 @@
----
-description: Implement feature to make tests pass (TDD Green phase)
-argument-hint: <story-id> <component>
-allowed-tools: Write, Edit, MultiEdit, Bash, Read
----
+# Implement Command
 
-Implement $ARGUMENTS to make the failing tests pass.
+## What It Does
+Implements a story using TDD.
 
-Requirements:
-1. Verify tests exist and are currently failing
-2. Write the MINIMUM code to make tests pass (no over-engineering)
-3. NO placeholder implementations allowed:
-   - No TODO comments
-   - No hardcoded values
-   - No empty catch blocks
-   - Complete error handling required
+## Usage
+`/implement [STORY-ID]`
 
-4. Run tests continuously during implementation
-5. When ALL tests pass, stop (save refactoring for later)
+## Steps
+1. Create feature branch
+2. Write failing tests
+3. Implement to pass tests
+4. Commit and push
 
-Validation:
-- All tests must pass
-- No compilation warnings
-- No placeholder code
-- Proper error handling implemented
+## Implementation
+Use the implementer agent:
+```javascript
+await Task({
+  subagent_type: "general-purpose",
+  description: "Story implementation",
+  prompt: "Use implementer agent to implement story ${STORY_ID}"
+});
+```
 
-This is the GREEN phase of Red-Green-Refactor.
-Focus on making tests pass, not on perfect code (that's for refactor phase).
+## Output
+```
+[1/5] Working on: STORY-123
+[2/5] Creating feature branch
+[3/5] Writing tests (red phase)
+[4/5] Implementing (green phase)
+[5/5] Committing
+✓ Story STORY-123 complete
+```
