@@ -1,0 +1,176 @@
+{
+  "agents": {
+    "code-fixer": {
+      "command": "claude-agent",
+      "args": ["--agent", "code-fixer"],
+      "configPath": "~/.claude/agents/code-fixer-agent.json",
+      "description": "Fixes ALL code issues without stopping"
+    },
+    "story-worker": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-worker"],
+      "configPath": "~/.claude/agents/story-worker-agent.json",
+      "description": "Implements complete user stories with TDD"
+    },
+    "solid-reviewer": {
+      "command": "claude-agent",
+      "args": ["--agent", "solid-reviewer"],
+      "configPath": "~/.claude/agents/solid-reviewer-agent.json",
+      "description": "Enforces SOLID principles and clean code"
+    },
+    "domain-analyzer": {
+      "command": "claude-agent",
+      "args": ["--agent", "domain-analyzer"],
+      "configPath": "~/.claude/agents/domain-analyzer-agent.json",
+      "description": "Analyzes codebase to create DDD models and ubiquitous language"
+    },
+    "architecture-refactor": {
+      "command": "claude-agent",
+      "args": ["--agent", "architecture-refactor"],
+      "configPath": "~/.claude/agents/architecture-refactor-agent.json",
+      "description": "Refactors to DDD architecture with SOLID principles"
+    },
+    "bdd-orchestrator": {
+      "command": "claude-agent",
+      "args": ["--agent", "bdd-orchestrator"],
+      "configPath": "~/.claude/agents/bdd-orchestrator-agent.json",
+      "description": "Orchestrates complete DDD transformation with BDD"
+    },
+    "production-orchestrator": {
+      "command": "claude-agent",
+      "args": ["--agent", "production-orchestrator"],
+      "configPath": "~/.claude/agents/production-orchestrator-agent.json",
+      "description": "Complete production pipeline with all quality gates for agile"
+    },
+    "story-workflow": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-workflow"],
+      "configPath": "~/.claude/agents/story-workflow-agent.json",
+      "description": "Manages complete story workflow from ticket to PR"
+    },
+    "pr-review": {
+      "command": "claude-agent",
+      "args": ["--agent", "pr-review"],
+      "configPath": "~/.claude/agents/pr-review-agent.json",
+      "description": "Monitors and addresses PR review comments automatically"
+    },
+    "bdd-manager": {
+      "command": "claude-agent",
+      "args": ["--agent", "bdd-manager"],
+      "configPath": "~/.claude/agents/bdd-manager-agent.json",
+      "description": "Complete BDD management with Gherkin optimization and step definitions"
+    },
+    "story-creator": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-creator"],
+      "configPath": "~/.claude/agents/story-creator-agent.json",
+      "description": "Creates JIRA stories from Gherkin with subtasks and tracking"
+    },
+    "story-implementer": {
+      "command": "claude-agent",
+      "args": ["--agent", "story-implementer"],
+      "configPath": "~/.claude/agents/story-implementer-agent.json",
+      "description": "Implements stories with branch creation and continuous JIRA updates"
+    },
+    "code-reviewer": {
+      "command": "claude-agent",
+      "args": ["--agent", "code-reviewer"],
+      "configPath": "~/.claude/agents/code-reviewer-agent.json",
+      "description": "Comprehensive code review with actionable feedback"
+    },
+    "jira-setup": {
+      "command": "claude-agent",
+      "args": ["--agent", "jira-setup"],
+      "configPath": "~/.claude/agents/jira-setup-agent.json",
+      "description": "MANDATORY JIRA project setup and .env configuration"
+    },
+    "jira-clean": {
+      "command": "claude-agent",
+      "args": ["--agent", "jira-clean"],
+      "configPath": "~/.claude/agents/jira-clean-agent.json",
+      "description": "DANGEROUS - Wipes ALL issues from JIRA project"
+    },
+    "slack-notifier": {
+      "command": "claude-agent",
+      "args": ["--agent", "slack-notifier"],
+      "configPath": "~/.claude/agents/slack-notifier-agent.json",
+      "description": "MANDATORY Slack notifications for all agent actions"
+    },
+    "slack-reader": {
+      "command": "claude-agent",
+      "args": ["--agent", "slack-reader"],
+      "configPath": "~/.claude/agents/slack-reader-agent.json",
+      "description": "Reads Slack messages for context and history"
+    }
+  },
+  "subagents": {
+    "code-fixer": {
+      "type": "general-purpose",
+      "configFile": "agents/code-fixer-agent.json"
+    },
+    "story-worker": {
+      "type": "general-purpose",
+      "configFile": "agents/story-worker-agent.json"
+    },
+    "solid-reviewer": {
+      "type": "general-purpose",
+      "configFile": "agents/solid-reviewer-agent.json"
+    },
+    "domain-analyzer": {
+      "type": "general-purpose",
+      "configFile": "agents/domain-analyzer-agent.json"
+    },
+    "architecture-refactor": {
+      "type": "general-purpose",
+      "configFile": "agents/architecture-refactor-agent.json"
+    },
+    "bdd-orchestrator": {
+      "type": "general-purpose",
+      "configFile": "agents/bdd-orchestrator-agent.json"
+    },
+    "production-orchestrator": {
+      "type": "general-purpose",
+      "configFile": "agents/production-orchestrator-agent.json"
+    },
+    "story-workflow": {
+      "type": "general-purpose",
+      "configFile": "agents/story-workflow-agent.json"
+    },
+    "pr-review": {
+      "type": "general-purpose",
+      "configFile": "agents/pr-review-agent.json"
+    },
+    "bdd-manager": {
+      "type": "general-purpose",
+      "configFile": "agents/bdd-manager-agent.json"
+    },
+    "story-creator": {
+      "type": "general-purpose",
+      "configFile": "agents/story-creator-agent.json"
+    },
+    "story-implementer": {
+      "type": "general-purpose",
+      "configFile": "agents/story-implementer-agent.json"
+    },
+    "code-reviewer": {
+      "type": "general-purpose",
+      "configFile": "agents/code-reviewer-agent.json"
+    },
+    "jira-setup": {
+      "type": "general-purpose",
+      "configFile": "agents/jira-setup-agent.json"
+    },
+    "jira-clean": {
+      "type": "general-purpose",
+      "configFile": "agents/jira-clean-agent.json"
+    },
+    "slack-notifier": {
+      "type": "general-purpose",
+      "configFile": "agents/slack-notifier-agent.json"
+    },
+    "slack-reader": {
+      "type": "general-purpose",
+      "configFile": "agents/slack-reader-agent.json"
+    }
+  }
+}

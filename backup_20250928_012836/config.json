@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "agents": {
+    "enabled": true,
+    "directory": "agents"
+  },
+  "commands": {
+    "enabled": true,
+    "directory": "commands"
+  },
+  "features": {
+    "forceTruth": true,
+    "bddFirst": true,
+    "mandatoryTesting": true
+  }
+}
