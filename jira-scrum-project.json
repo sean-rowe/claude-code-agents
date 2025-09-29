@@ -1,0 +1,59 @@
+{
+  "key": "PROJ",
+  "name": "Pipeline Project",
+  "projectTypeKey": "software",
+  "projectTemplateKey": "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic",
+  "description": "Project created by pipeline-controller with Epic and Story support",
+  "leadAccountId": "admin",
+  "assigneeType": "PROJECT_LEAD",
+  "avatarId": 10200,
+  "issueTypes": [
+    {
+      "name": "Epic",
+      "description": "A big user story that needs to be broken down.",
+      "subtask": false,
+      "avatarId": 10307
+    },
+    {
+      "name": "Story",
+      "description": "A user story",
+      "subtask": false,
+      "avatarId": 10315
+    },
+    {
+      "name": "Task",
+      "description": "A task that needs to be done.",
+      "subtask": false,
+      "avatarId": 10318
+    },
+    {
+      "name": "Sub-task",
+      "description": "A sub-task of an issue",
+      "subtask": true,
+      "avatarId": 10316
+    },
+    {
+      "name": "Bug",
+      "description": "A problem which impairs or prevents the functions of the product.",
+      "subtask": false,
+      "avatarId": 10303
+    }
+  ],
+  "workflowScheme": {
+    "name": "Scrum Workflow Scheme",
+    "description": "Workflow scheme for Scrum projects",
+    "defaultWorkflow": "Scrum Workflow",
+    "issueTypeMappings": {
+      "Epic": "Scrum Workflow",
+      "Story": "Scrum Workflow",
+      "Task": "Scrum Workflow",
+      "Sub-task": "Scrum Workflow",
+      "Bug": "Scrum Workflow"
+    }
+  },
+  "issueTypeScheme": {
+    "name": "Scrum Issue Type Scheme",
+    "description": "Issue type scheme for Scrum projects",
+    "issueTypes": ["Epic", "Story", "Task", "Sub-task", "Bug"]
+  }
+}
