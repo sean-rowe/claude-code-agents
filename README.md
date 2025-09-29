@@ -40,6 +40,17 @@ Each stage:
 - Maintains state for resume capability
 - Fails fast with clear error messages
 
+### JIRA Project Setup
+
+**IMPORTANT**: Your JIRA project must support Epic and Story issue types. Use the provided `jira-project-template.json`:
+
+```bash
+# Create proper JIRA project with Epic/Story support
+acli jira project create --file jira-project-template.json
+```
+
+See `JIRA_SETUP_INSTRUCTIONS.md` for detailed setup instructions.
+
 ## Commands
 
 ### Pipeline Commands
@@ -102,6 +113,8 @@ claude-code-agents/
 │   ├── requirements.md
 │   ├── epic-description.md
 │   └── story-description.md
+├── jira-project-template.json # JIRA project with Epic/Story types
+├── JIRA_SETUP_INSTRUCTIONS.md # Detailed JIRA setup guide
 ├── jira-hierarchy-setup.sh    # JIRA setup script
 ├── pipeline-state-manager.sh  # State management
 ├── install.sh                 # Installation script

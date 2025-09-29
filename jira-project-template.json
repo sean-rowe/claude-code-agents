@@ -1,0 +1,213 @@
+{
+  "projectKey": "PROJ",
+  "projectName": "Project Name",
+  "projectTypeKey": "software",
+  "projectTemplateKey": "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic",
+  "description": "Production-ready project with full agile hierarchy support",
+  "lead": "admin",
+  "url": "https://project.example.com",
+  "assigneeType": "PROJECT_LEAD",
+  "avatarId": 10200,
+  "issueSecurityScheme": null,
+  "permissionScheme": null,
+  "notificationScheme": null,
+  "workflowScheme": null,
+  "categoryId": null,
+  "issueTypes": [
+    {
+      "name": "Epic",
+      "description": "A big user story that needs to be broken down. Created for high-level features.",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/epic.svg"
+    },
+    {
+      "name": "Story",
+      "description": "A user story - functionality from the user perspective",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/story.svg"
+    },
+    {
+      "name": "Task",
+      "description": "A task that needs to be done",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/task.svg"
+    },
+    {
+      "name": "Bug",
+      "description": "A problem which impairs or prevents the functions of the product",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/bug.svg"
+    },
+    {
+      "name": "Sub-task",
+      "description": "The sub-task of the issue",
+      "subtask": true,
+      "iconUrl": "/images/icons/issuetypes/subtask.svg"
+    },
+    {
+      "name": "Technical Debt",
+      "description": "Technical work that needs to be done but doesn't directly deliver user value",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/technical_debt.svg"
+    },
+    {
+      "name": "Spike",
+      "description": "A time-boxed research or investigation task",
+      "subtask": false,
+      "iconUrl": "/images/icons/issuetypes/spike.svg"
+    }
+  ],
+  "customFields": {
+    "epicName": {
+      "name": "Epic Name",
+      "description": "Short name for the epic",
+      "type": "com.pyxis.greenhopper.jira:gh-epic-label",
+      "searcherKey": "com.pyxis.greenhopper.jira:gh-epic-label-searcher"
+    },
+    "epicLink": {
+      "name": "Epic Link",
+      "description": "Link to parent epic",
+      "type": "com.pyxis.greenhopper.jira:gh-epic-link",
+      "searcherKey": "com.pyxis.greenhopper.jira:gh-epic-link-searcher"
+    },
+    "storyPoints": {
+      "name": "Story Points",
+      "description": "Estimate in story points",
+      "type": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+      "searcherKey": "com.atlassian.jira.plugin.system.customfieldtypes:exactnumber"
+    },
+    "acceptanceCriteria": {
+      "name": "Acceptance Criteria",
+      "description": "Conditions that must be met for the story to be accepted",
+      "type": "com.atlassian.jira.plugin.system.customfieldtypes:textarea",
+      "searcherKey": "com.atlassian.jira.plugin.system.customfieldtypes:textsearcher"
+    },
+    "businessValue": {
+      "name": "Business Value",
+      "description": "The business value this delivers",
+      "type": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+      "options": ["Critical", "High", "Medium", "Low"],
+      "searcherKey": "com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher"
+    }
+  },
+  "workflows": {
+    "epic": {
+      "name": "Epic Workflow",
+      "statuses": ["To Do", "In Progress", "Done"],
+      "transitions": [
+        {"from": "To Do", "to": "In Progress", "name": "Start Epic"},
+        {"from": "In Progress", "to": "Done", "name": "Complete Epic"},
+        {"from": "In Progress", "to": "To Do", "name": "Stop Progress"}
+      ]
+    },
+    "story": {
+      "name": "Story Workflow",
+      "statuses": ["To Do", "In Progress", "In Review", "Testing", "Done"],
+      "transitions": [
+        {"from": "To Do", "to": "In Progress", "name": "Start Work"},
+        {"from": "In Progress", "to": "In Review", "name": "Submit for Review"},
+        {"from": "In Review", "to": "Testing", "name": "Approve"},
+        {"from": "In Review", "to": "In Progress", "name": "Request Changes"},
+        {"from": "Testing", "to": "Done", "name": "Pass Testing"},
+        {"from": "Testing", "to": "In Progress", "name": "Failed Testing"}
+      ]
+    },
+    "task": {
+      "name": "Task Workflow",
+      "statuses": ["To Do", "In Progress", "Done"],
+      "transitions": [
+        {"from": "To Do", "to": "In Progress", "name": "Start Progress"},
+        {"from": "In Progress", "to": "Done", "name": "Resolve"},
+        {"from": "In Progress", "to": "To Do", "name": "Stop Progress"}
+      ]
+    }
+  },
+  "screens": {
+    "epic": {
+      "fields": [
+        "summary",
+        "description",
+        "epicName",
+        "businessValue",
+        "acceptanceCriteria",
+        "labels",
+        "components",
+        "fixVersions",
+        "priority",
+        "assignee",
+        "reporter"
+      ]
+    },
+    "story": {
+      "fields": [
+        "summary",
+        "description",
+        "epicLink",
+        "storyPoints",
+        "acceptanceCriteria",
+        "labels",
+        "components",
+        "fixVersions",
+        "priority",
+        "assignee",
+        "reporter"
+      ]
+    }
+  },
+  "boards": {
+    "main": {
+      "name": "Main Board",
+      "type": "scrum",
+      "filter": "project = PROJ",
+      "columns": [
+        {"name": "To Do", "statuses": ["To Do"]},
+        {"name": "In Progress", "statuses": ["In Progress"], "max": 5},
+        {"name": "In Review", "statuses": ["In Review"], "max": 3},
+        {"name": "Testing", "statuses": ["Testing"]},
+        {"name": "Done", "statuses": ["Done"]}
+      ],
+      "swimlanes": "epicLink",
+      "quickFilters": [
+        {"name": "My Issues", "jql": "assignee = currentUser()"},
+        {"name": "Blocked", "jql": "labels = blocked"},
+        {"name": "High Priority", "jql": "priority in (Critical, High)"}
+      ]
+    }
+  },
+  "components": [
+    {"name": "Backend", "description": "Server-side logic and APIs", "lead": null},
+    {"name": "Frontend", "description": "User interface and client code", "lead": null},
+    {"name": "Database", "description": "Data persistence layer", "lead": null},
+    {"name": "Infrastructure", "description": "Deployment and DevOps", "lead": null},
+    {"name": "Testing", "description": "Test automation and QA", "lead": null}
+  ],
+  "versions": [
+    {"name": "v1.0.0", "description": "Initial release", "releaseDate": "2024-03-01"},
+    {"name": "v1.1.0", "description": "Feature update", "releaseDate": "2024-04-01"},
+    {"name": "v2.0.0", "description": "Major release", "releaseDate": "2024-06-01"}
+  ],
+  "labels": [
+    "technical-debt",
+    "spike",
+    "blocked",
+    "ready-for-test",
+    "production-ready",
+    "needs-refinement",
+    "quick-win",
+    "critical-path"
+  ],
+  "priorities": [
+    {"name": "Critical", "color": "#FF0000", "description": "Must be done immediately"},
+    {"name": "High", "color": "#FF9900", "description": "Important, do soon"},
+    {"name": "Medium", "color": "#FFD700", "description": "Normal priority"},
+    {"name": "Low", "color": "#0066CC", "description": "Nice to have"}
+  ],
+  "resolutions": [
+    "Done",
+    "Won't Do",
+    "Duplicate",
+    "Cannot Reproduce",
+    "Incomplete",
+    "Fixed"
+  ]
+}
