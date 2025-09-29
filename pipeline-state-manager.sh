@@ -1,11 +1,30 @@
 #!/bin/bash
 # Pipeline State Manager
-# Manages state for pipeline execution
+# Manages state for pipeline execution in .pipeline directory
 
-STATE_FILE="pipeline-state.json"
+PIPELINE_DIR=".pipeline"
+STATE_FILE="$PIPELINE_DIR/state.json"
+
+# Ensure pipeline directory exists
+ensure_pipeline_dir() {
+    if [ ! -d "$PIPELINE_DIR" ]; then
+        mkdir -p "$PIPELINE_DIR"
+        echo "✓ Created $PIPELINE_DIR directory for pipeline state"
+
+        # Add to .gitignore if it exists
+        if [ -f .gitignore ]; then
+            if ! grep -q "^\.pipeline" .gitignore; then
+                echo ".pipeline/" >> .gitignore
+                echo "✓ Added .pipeline to .gitignore"
+            fi
+        fi
+    fi
+}
 
 # Initialize state if not exists
 init_state() {
+    ensure_pipeline_dir
+
     if [ ! -f "$STATE_FILE" ]; then
         cat > "$STATE_FILE" <<EOF
 {
@@ -21,10 +40,11 @@ init_state() {
     "step": 0,
     "totalSteps": 0,
     "lastAction": "Initialized",
-    "nextAction": "Run '/pipeline requirements' to start"
+    "nextAction": "Run '/pipeline requirements' to start",
+    "startTime": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
-        echo "✓ Pipeline state initialized"
+        echo "✓ Pipeline state initialized in $STATE_FILE"
     fi
 }
 
@@ -43,16 +63,18 @@ update_state() {
     local field=$1
     local value=$2
 
+    ensure_pipeline_dir
     if [ ! -f "$STATE_FILE" ]; then
         init_state
     fi
 
     # Use jq to update JSON field
     if command -v jq &>/dev/null; then
-        jq ".$field = \"$value\"" "$STATE_FILE" > tmp.json && mv tmp.json "$STATE_FILE"
+        jq ".$field = \"$value\"" "$STATE_FILE" > "$PIPELINE_DIR/tmp.json" && mv "$PIPELINE_DIR/tmp.json" "$STATE_FILE"
     else
         # Fallback to sed if jq not available
         sed -i.bak "s/\"$field\": \"[^\"]*\"/\"$field\": \"$value\"/" "$STATE_FILE"
+        rm -f "$STATE_FILE.bak"
     fi
 }
 
@@ -60,6 +82,7 @@ update_state() {
 get_state() {
     local field=$1
 
+    ensure_pipeline_dir
     if [ ! -f "$STATE_FILE" ]; then
         init_state
     fi
@@ -73,6 +96,7 @@ get_state() {
 
 # Show current status
 show_status() {
+    ensure_pipeline_dir
     if [ ! -f "$STATE_FILE" ]; then
         init_state
     fi
@@ -117,6 +141,7 @@ show_status() {
             ;;
         "complete")
             echo "Available: /pipeline work [NEXT-STORY-ID]"
+            echo "         or: /pipeline cleanup (to finish and clean up)"
             ;;
     esac
 
@@ -125,9 +150,36 @@ show_status() {
 
 # Reset state
 reset_state() {
-    rm -f "$STATE_FILE"
-    init_state
-    echo "✓ Pipeline state reset"
+    if [ -d "$PIPELINE_DIR" ]; then
+        rm -rf "$PIPELINE_DIR"
+        echo "✓ Pipeline state reset - removed $PIPELINE_DIR directory"
+    else
+        echo "No pipeline state to reset"
+    fi
+}
+
+# Cleanup pipeline directory (called when pipeline is complete)
+cleanup_pipeline() {
+    local stage=$(get_state "stage")
+
+    # Save summary before cleanup
+    if [ -f "$STATE_FILE" ]; then
+        echo "==================================="
+        echo "PIPELINE SUMMARY"
+        echo "==================================="
+        echo "Project: $(get_state projectKey)"
+        echo "Epic: $(get_state epicId)"
+        echo "Stories: $(get_state featureStories)"
+        echo "Start Time: $(get_state startTime)"
+        echo "End Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "==================================="
+    fi
+
+    # Remove pipeline directory
+    if [ -d "$PIPELINE_DIR" ]; then
+        rm -rf "$PIPELINE_DIR"
+        echo "✓ Pipeline complete - cleaned up $PIPELINE_DIR directory"
+    fi
 }
 
 # Error recovery
@@ -183,8 +235,17 @@ case "$1" in
     reset)
         reset_state
         ;;
+    cleanup)
+        cleanup_pipeline
+        ;;
+    error)
+        recover_from_error "$2"
+        ;;
+    retry)
+        retry_from_error
+        ;;
     *)
-        echo "Usage: $0 {init|update|get|status|reset}"
+        echo "Usage: $0 {init|update|get|status|reset|cleanup|error|retry}"
         echo ""
         echo "Commands:"
         echo "  init           - Initialize state file"
@@ -192,5 +253,8 @@ case "$1" in
         echo "  get <field>    - Get state field value"
         echo "  status         - Show current status"
         echo "  reset          - Reset state to initial"
+        echo "  cleanup        - Complete pipeline and clean up"
+        echo "  error <msg>    - Record error state"
+        echo "  retry          - Retry from error"
         ;;
 esac
