@@ -1,0 +1,94 @@
+{
+  "key": "CUEM",
+  "name": "CueMap",
+  "description": "CueMap project with custom hierarchy: Feature → Epic → Rule → Scenario",
+  "projectTypeKey": "software",
+  "leadAccountEmail": "y7gn4rprr4@privaterelay.appleid.com",
+  "projectTemplateKey": "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic",
+  "issueTypes": [
+    {
+      "name": "Feature",
+      "description": "High-level feature containing multiple epics",
+      "type": "standard",
+      "hierarchyLevel": 3,
+      "subtask": false
+    },
+    {
+      "name": "Epic",
+      "description": "A collection of related user stories",
+      "type": "standard",
+      "hierarchyLevel": 2,
+      "subtask": false
+    },
+    {
+      "name": "Rule",
+      "description": "Business rule or requirement specification",
+      "type": "standard",
+      "hierarchyLevel": 1,
+      "subtask": false
+    },
+    {
+      "name": "Scenario",
+      "description": "Test scenario or use case for a rule",
+      "type": "standard",
+      "hierarchyLevel": 0,
+      "subtask": false
+    },
+    {
+      "name": "Story",
+      "description": "A user story",
+      "type": "standard",
+      "hierarchyLevel": 0,
+      "subtask": false
+    },
+    {
+      "name": "Task",
+      "description": "A task that needs to be done",
+      "type": "standard",
+      "hierarchyLevel": 0,
+      "subtask": false
+    },
+    {
+      "name": "Bug",
+      "description": "A defect or issue that needs to be fixed",
+      "type": "standard",
+      "hierarchyLevel": 0,
+      "subtask": false
+    },
+    {
+      "name": "Sub-task",
+      "description": "A subtask of another issue",
+      "type": "subtask",
+      "hierarchyLevel": -1,
+      "subtask": true
+    }
+  ],
+  "hierarchy": {
+    "levels": [
+      {
+        "name": "Feature",
+        "level": 3,
+        "issueTypes": ["Feature"],
+        "aboveLevelId": null
+      },
+      {
+        "name": "Epic",
+        "level": 2,
+        "issueTypes": ["Epic"],
+        "aboveLevelId": 3
+      },
+      {
+        "name": "Rule",
+        "level": 1,
+        "issueTypes": ["Rule"],
+        "aboveLevelId": 2
+      },
+      {
+        "name": "Scenario",
+        "level": 0,
+        "issueTypes": ["Scenario"],
+        "aboveLevelId": 1
+      }
+    ]
+  }
+}
