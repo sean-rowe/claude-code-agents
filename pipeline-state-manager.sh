@@ -2,6 +2,8 @@
 # Pipeline State Manager
 # Manages state for pipeline execution in .pipeline directory
 
+set -euo pipefail
+
 PIPELINE_DIR=".pipeline"
 STATE_FILE="$PIPELINE_DIR/state.json"
 

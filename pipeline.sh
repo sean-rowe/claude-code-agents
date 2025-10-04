@@ -306,6 +306,7 @@ EOF
     echo "ACTION: Implementing (TDD Green phase)"
 
     if [ -f package.json ]; then
+      # Node.js - use TEST_DIR from test phase (should be "src")
       cat > "$TEST_DIR/${STORY_NAME}.js" <<EOF
 // Implementation for $STORY_ID
 
@@ -320,6 +321,7 @@ EOF
       echo "✓ Created implementation: $TEST_DIR/${STORY_NAME}.js"
 
     elif [ -f go.mod ]; then
+      # Go - create in project root
       PACKAGE_NAME=$(grep "^module" go.mod | awk '{print $2}' | xargs basename)
       cat > "${STORY_NAME}.go" <<EOF
 package ${PACKAGE_NAME}
@@ -337,7 +339,23 @@ EOF
       echo "✓ Created implementation: ${STORY_NAME}.go"
 
     elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then
-      cat > "${STORY_NAME}.py" <<EOF
+      # Python - determine proper location
+      if [ -d "src" ]; then
+        IMPL_DIR="src"
+      elif [ -d "$(basename "$PWD")" ]; then
+        # Use package name if it exists as directory
+        PACKAGE_DIR=$(find . -maxdepth 1 -type d -name "[a-z]*" ! -name "tests" ! -name "." ! -name ".git" | head -1)
+        if [ -n "$PACKAGE_DIR" ]; then
+          IMPL_DIR="${PACKAGE_DIR#./}"
+        else
+          IMPL_DIR="."
+        fi
+      else
+        IMPL_DIR="."
+      fi
+
+      mkdir -p "$IMPL_DIR"
+      cat > "$IMPL_DIR/${STORY_NAME}.py" <<EOF
 # Implementation for $STORY_ID
 
 def implement():
@@ -346,9 +364,10 @@ def implement():
 def validate():
     return True
 EOF
-      echo "✓ Created implementation: ${STORY_NAME}.py"
+      echo "✓ Created implementation: $IMPL_DIR/${STORY_NAME}.py"
 
     else
+      # Generic bash script in project root
       cat > "${STORY_NAME}.sh" <<EOF
 #!/bin/bash
 # Implementation for $STORY_ID
@@ -389,26 +408,52 @@ EOF
       echo "⚠ Tests failed - review .pipeline/work/test_output.log"
     fi
 
+    echo ""
+    echo "======================================"
+    echo "⚠ IMPORTANT: STUB IMPLEMENTATION"
+    echo "======================================"
+    echo "The generated code contains stub implementations that only return"
+    echo "true/True values. This is TDD scaffolding, not production code."
+    echo ""
+    echo "Next steps:"
+    echo "1. Review generated test files"
+    echo "2. Replace stub return values with real business logic"
+    echo "3. Add proper validation and error handling"
+    echo "4. Run tests again to verify your implementation"
+    echo "======================================"
+    echo ""
+
     # Step 5: Commit changes
     echo "STEP: 6 of 6"
     echo "ACTION: Committing changes"
 
     if git rev-parse --git-dir > /dev/null 2>&1; then
       git add -A
-      git commit -m "feat: implement $STORY_ID
+
+      if git commit -m "feat: implement $STORY_ID
 
 - Added tests for $STORY_ID
 - Implemented feature to pass tests
 - Generated via pipeline.sh
 
 🤖 Generated with Claude Code
-Co-Authored-By: Claude <noreply@anthropic.com>" || echo "⚠ Nothing to commit or commit failed"
+Co-Authored-By: Claude <noreply@anthropic.com>"; then
+        echo "✓ Changes committed"
+      else
+        echo "⚠ Nothing to commit or commit failed"
+      fi
 
       # Push branch
       echo "Pushing branch to remote..."
-      git push -u origin "$BRANCH_NAME" 2>&1 || echo "⚠ Push failed - you may need to push manually"
-
-      echo "✓ Changes committed and pushed"
+      if git push -u origin "$BRANCH_NAME" 2>&1; then
+        echo "✓ Changes pushed to remote"
+      else
+        echo ""
+        echo "⚠ Push to remote failed"
+        echo "Branch created locally: $BRANCH_NAME"
+        echo "To push later, run: git push -u origin $BRANCH_NAME"
+        echo ""
+      fi
     else
       echo "⚠ Not a git repository - skipping commit"
     fi
