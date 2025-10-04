@@ -108,7 +108,7 @@ EOF
         if grep -q "^package " "$TEST_FILE" && \
            grep -q "import.*testing" "$TEST_FILE" && \
            grep -q "func Test" "$TEST_FILE" && \
-           grep -q "t.testing.T" "$TEST_FILE"; then
+           grep -q "\*testing\.T" "$TEST_FILE"; then
             echo "PASS: Go test file has valid syntax"
             return 0
         else
