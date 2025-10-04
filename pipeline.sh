@@ -11,9 +11,15 @@ if [ -f "$SCRIPT_DIR/pipeline-state-manager.sh" ]; then
   source "$SCRIPT_DIR/pipeline-state-manager.sh"
 fi
 
-STAGE=$1
-shift
-ARGS="$@"
+# Validate arguments
+if [ $# -eq 0 ]; then
+  STAGE="help"
+  ARGS=""
+else
+  STAGE=$1
+  shift
+  ARGS="$@"
+fi
 
 case "$STAGE" in
   requirements)
@@ -341,17 +347,23 @@ EOF
     elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then
       # Python - determine proper location
       if [ -d "src" ]; then
+        # Standard Python src layout
         IMPL_DIR="src"
-      elif [ -d "$(basename "$PWD")" ]; then
-        # Use package name if it exists as directory
-        PACKAGE_DIR=$(find . -maxdepth 1 -type d -name "[a-z]*" ! -name "tests" ! -name "." ! -name ".git" | head -1)
-        if [ -n "$PACKAGE_DIR" ]; then
-          IMPL_DIR="${PACKAGE_DIR#./}"
-        else
-          IMPL_DIR="."
-        fi
       else
-        IMPL_DIR="."
+        # Try to find package directory with same name as project
+        PROJECT_NAME=$(basename "$PWD")
+        if [ -d "$PROJECT_NAME" ]; then
+          IMPL_DIR="$PROJECT_NAME"
+        else
+          # Find any lowercase directory that's not tests/
+          PACKAGE_DIR=$(find . -maxdepth 1 -type d -name "[a-z_]*" ! -name "tests" ! -name "." ! -name ".git" ! -name "venv" ! -name ".venv" ! -name "node_modules" | head -1)
+          if [ -n "$PACKAGE_DIR" ]; then
+            IMPL_DIR="${PACKAGE_DIR#./}"
+          else
+            # Fall back to project root
+            IMPL_DIR="."
+          fi
+        fi
       fi
 
       mkdir -p "$IMPL_DIR"
@@ -430,14 +442,18 @@ EOF
     if git rev-parse --git-dir > /dev/null 2>&1; then
       git add -A
 
-      if git commit -m "feat: implement $STORY_ID
+      # Use heredoc for safer commit message handling
+      if git commit -F - <<EOF
+feat: implement $STORY_ID
 
 - Added tests for $STORY_ID
 - Implemented feature to pass tests
 - Generated via pipeline.sh
 
 🤖 Generated with Claude Code
-Co-Authored-By: Claude <noreply@anthropic.com>"; then
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+      then
         echo "✓ Changes committed"
       else
         echo "⚠ Nothing to commit or commit failed"
@@ -531,7 +547,7 @@ EOF
     fi
     ;;
 
-  *)
+  help|*)
     echo "Pipeline Controller"
     echo ""
     echo "Usage: ./pipeline.sh [stage] [options]"
@@ -544,6 +560,7 @@ EOF
     echo "  complete STORY-ID           - Complete story"
     echo "  cleanup                     - Remove .pipeline directory"
     echo "  status                      - Show current state"
+    echo "  help                        - Show this help message"
     echo ""
     echo "Example workflow:"
     echo "  ./pipeline.sh requirements 'Build auth system'"

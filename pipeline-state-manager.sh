@@ -220,43 +220,45 @@ retry_from_error() {
     fi
 }
 
-# Main command handler
-case "$1" in
-    init)
-        init_state
-        ;;
-    update)
-        update_state "$2" "$3"
-        ;;
-    get)
-        get_state "$2"
-        ;;
-    status)
-        show_status
-        ;;
-    reset)
-        reset_state
-        ;;
-    cleanup)
-        cleanup_pipeline
-        ;;
-    error)
-        recover_from_error "$2"
-        ;;
-    retry)
-        retry_from_error
-        ;;
-    *)
-        echo "Usage: $0 {init|update|get|status|reset|cleanup|error|retry}"
-        echo ""
-        echo "Commands:"
-        echo "  init           - Initialize state file"
-        echo "  update <field> <value> - Update state field"
-        echo "  get <field>    - Get state field value"
-        echo "  status         - Show current status"
-        echo "  reset          - Reset state to initial"
-        echo "  cleanup        - Complete pipeline and clean up"
-        echo "  error <msg>    - Record error state"
-        echo "  retry          - Retry from error"
-        ;;
-esac
+# Main command handler (only run if executed directly, not when sourced)
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  case "${1:-}" in
+      init)
+          init_state
+          ;;
+      update)
+          update_state "$2" "$3"
+          ;;
+      get)
+          get_state "$2"
+          ;;
+      status)
+          show_status
+          ;;
+      reset)
+          reset_state
+          ;;
+      cleanup)
+          cleanup_pipeline
+          ;;
+      error)
+          recover_from_error "${2:-}"
+          ;;
+      retry)
+          retry_from_error
+          ;;
+      *)
+          echo "Usage: $0 {init|update|get|status|reset|cleanup|error|retry}"
+          echo ""
+          echo "Commands:"
+          echo "  init           - Initialize state file"
+          echo "  update <field> <value> - Update state field"
+          echo "  get <field>    - Get state field value"
+          echo "  status         - Show current status"
+          echo "  reset          - Reset state to initial"
+          echo "  cleanup        - Complete pipeline and clean up"
+          echo "  error <msg>    - Record error state"
+          echo "  retry          - Retry from error"
+          ;;
+  esac
+fi
