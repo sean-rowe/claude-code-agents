@@ -236,10 +236,22 @@ case "$STAGE" in
     echo "STEP: 1 of 3"
     echo "ACTION: Initializing pipeline"
 
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would initialize .pipeline directory"
+      log_info "[DRY-RUN] Would create requirements.md"
+      log_info "[DRY-RUN] Would initialize state.json"
+      echo "RESULT: [DRY-RUN] Would generate .pipeline/requirements.md"
+      echo "NEXT: Run './pipeline.sh gherkin'"
+    else
+
+    log_debug "Initializing requirements stage"
+
     # Use state manager to initialize
     if type init_state &>/dev/null; then
+      log_debug "Using state manager init_state()"
       init_state
     else
+      log_debug "State manager not available, using fallback"
       # Fallback if state manager not loaded
       mkdir -p .pipeline
       mkdir -p .pipeline/features
@@ -291,18 +303,29 @@ This initiative implements $INITIATIVE with comprehensive testing and documentat
 - Availability: 99.9% uptime
 EOF
 
-    echo "RESULT: Generated .pipeline/requirements.md"
-    echo "NEXT: Run './pipeline.sh gherkin'"
+      echo "RESULT: Generated .pipeline/requirements.md"
+      echo "NEXT: Run './pipeline.sh gherkin'"
+    fi
     ;;
 
   gherkin)
     echo "STAGE: gherkin"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would create .pipeline/features directory"
+      log_info "[DRY-RUN] Would generate feature files: authentication, authorization, data"
+      echo "RESULT: [DRY-RUN] Would generate 3 feature files"
+      echo "NEXT: Run './pipeline.sh stories'"
+    else
+
+    log_debug "Generating Gherkin feature files"
 
     # Ensure features directory exists
     mkdir -p .pipeline/features
 
     # Generate feature files
     for feature in authentication authorization data; do
+      log_debug "Generating ${feature}.feature"
       cat > .pipeline/features/${feature}.feature <<EOF
 Feature: ${feature}
   As a user
@@ -331,6 +354,7 @@ EOF
     echo "RESULT: Generated features in .pipeline/features/"
     ls .pipeline/features/
     echo "NEXT: Run './pipeline.sh stories'"
+    fi
     ;;
 
   stories)
@@ -338,22 +362,31 @@ EOF
     echo "STEP: 1 of 7"
     echo "ACTION: Verifying/Creating JIRA project with Epic/Story support"
 
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would create .pipeline/exports directory"
+      log_info "[DRY-RUN] Would check for acli command"
+      log_info "[DRY-RUN] Would generate JIRA CSV export"
+      log_info "[DRY-RUN] Would save hierarchy JSON"
+      echo "RESULT: [DRY-RUN] Would save files to .pipeline/"
+      echo "NEXT: Run './pipeline.sh work STORY-ID'"
+    else
+
     mkdir -p .pipeline/exports
 
-    # Check if acli is available
+    # Check if acli is available (optional dependency)
     if ! command -v acli &>/dev/null; then
-      echo "WARNING: acli not found. Creating mock JIRA data."
+      log_warn "acli not found. Creating mock JIRA data. Install from: https://bobswift.atlassian.net/wiki/spaces/ACLI/overview"
       EPIC_ID="PROJ-1"
       STORIES="PROJ-2,PROJ-3,PROJ-4"
     else
-      # Check project
-      acli jira project view --key PROJ 2>/dev/null
-      if [ $? -ne 0 ]; then
-        echo "Project PROJ does not exist."
-        echo "Would create with: acli jira project create --from-json jira-scrum-project.json"
+      log_debug "Found acli command"
+      # Check project with retry (network operation)
+      if retry_command $MAX_RETRIES "acli jira project view --key PROJ 2>/dev/null"; then
+        log_info "Project PROJ exists"
         EPIC_ID="PROJ-1"
       else
-        echo "Project PROJ exists."
+        log_warn "Project PROJ does not exist"
+        echo "Would create with: acli jira project create --from-json jira-scrum-project.json"
         EPIC_ID="PROJ-1"
       fi
       STORIES="PROJ-2,PROJ-3,PROJ-4"
@@ -386,13 +419,17 @@ EOF
 
     echo "✓ Saved hierarchy to .pipeline/exports/jira_hierarchy.json"
 
-    # Update state
+    # Update state (jq is optional but recommended)
     if command -v jq &>/dev/null; then
+      log_debug "Updating state with jq"
       jq ".stage = \"stories\" | .epicId = \"$EPIC_ID\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+    else
+      log_warn "jq not found. State file not updated. Install with: brew install jq"
     fi
 
     echo "RESULT: All files saved to .pipeline/"
     echo "NEXT: Run './pipeline.sh work STORY-ID'"
+    fi
     ;;
 
   work)
@@ -401,8 +438,20 @@ EOF
     echo "STEP: 1 of 6"
     echo "ACTION: Working on story: $STORY_ID"
 
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would work on story: $STORY_ID"
+      log_info "[DRY-RUN] Would create feature branch: feature/$STORY_ID"
+      log_info "[DRY-RUN] Would detect project type"
+      log_info "[DRY-RUN] Would generate tests and implementation"
+      echo "RESULT: [DRY-RUN] Would generate code for $STORY_ID"
+      echo "NEXT: Run './pipeline.sh complete $STORY_ID'"
+    else
+
+    log_debug "Working on story: $STORY_ID"
+
     # Update state
     if command -v jq &>/dev/null; then
+      log_debug "Updating state for work stage"
       jq ".stage = \"work\" | .currentStory = \"$STORY_ID\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
     fi
 
@@ -412,6 +461,7 @@ EOF
     BRANCH_NAME="feature/$STORY_ID"
 
     if git rev-parse --git-dir > /dev/null 2>&1; then
+      log_debug "Git repository detected"
       git checkout -b "$BRANCH_NAME" 2>/dev/null || git checkout "$BRANCH_NAME"
       echo "✓ Branch created/checked out: $BRANCH_NAME"
 
@@ -420,6 +470,7 @@ EOF
         jq ".branch = \"$BRANCH_NAME\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
       fi
     else
+      log_warn "Not a git repository - skipping branch creation"
       echo "⚠ Not a git repository - skipping branch creation"
     fi
 
@@ -430,7 +481,9 @@ EOF
     mkdir -p .pipeline/work
     STORY_NAME=$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
 
+    # Detect project type and check dependencies
     if [ -f package.json ]; then
+      log_debug "Detected Node.js project"
       # Node.js/JavaScript project - create Jest test
       TEST_DIR="src"
       mkdir -p "$TEST_DIR"
@@ -1201,11 +1254,13 @@ EOF
         echo "⚠ Nothing to commit or commit failed"
       fi
 
-      # Push branch
+      # Push branch with retry logic (network operation)
       echo "Pushing branch to remote..."
-      if git push -u origin "$BRANCH_NAME" 2>&1; then
+      if retry_command $MAX_RETRIES "git push -u origin \"$BRANCH_NAME\" 2>&1"; then
         echo "✓ Changes pushed to remote"
+        log_info "Successfully pushed branch $BRANCH_NAME to remote"
       else
+        log_error "Failed to push to remote repository after $MAX_RETRIES attempts" $E_NETWORK_FAILURE
         echo ""
         echo "❌ Failed to push to remote repository"
         echo ""
@@ -1230,12 +1285,21 @@ EOF
     find . -name "*${STORY_NAME}*" -type f 2>/dev/null | grep -v ".git" | grep -v "node_modules"
     echo ""
     echo "NEXT: Run './pipeline.sh complete $STORY_ID'"
+    fi
     ;;
 
   complete)
     STORY_ID="${ARGS:-PROJ-2}"
     echo "STAGE: complete"
     echo "Completing story: $STORY_ID"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would generate completion report for $STORY_ID"
+      echo "RESULT: [DRY-RUN] Would save completion report"
+      echo "NEXT: Run './pipeline.sh cleanup' to remove .pipeline directory"
+    else
+
+    log_debug "Completing story: $STORY_ID"
 
     # Generate completion report
     mkdir -p .pipeline/reports
@@ -1248,11 +1312,20 @@ EOF
 
     echo "✓ Report saved to .pipeline/reports/"
     echo "NEXT: Run './pipeline.sh cleanup' to remove .pipeline directory"
+    fi
     ;;
 
   cleanup)
     echo "STAGE: cleanup"
     echo "ACTION: Completing pipeline and cleaning up"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would show pipeline summary"
+      log_info "[DRY-RUN] Would remove .pipeline directory"
+      echo "✓ [DRY-RUN] Would complete pipeline cleanup"
+    else
+
+    log_debug "Cleaning up pipeline artifacts"
 
     if [ -d .pipeline ]; then
       echo "Pipeline artifacts to be removed:"
@@ -1272,11 +1345,14 @@ EOF
       # Remove entire directory
       rm -rf .pipeline
       echo "✓ Removed .pipeline directory and all contents"
+      log_info "Pipeline cleanup complete"
     else
+      log_warn "No .pipeline directory to clean up"
       echo "No .pipeline directory to clean up"
     fi
 
     echo "✓ Pipeline complete!"
+    fi
     ;;
 
   status)
