@@ -85,15 +85,24 @@ test_python_has_type_hints() {
     run_pipeline stories >/dev/null
     run_pipeline work "PROJ-2" >/dev/null 2>&1
 
+    # Debug: check if file exists and show a sample
+    if [ ! -f "src/proj_2.py" ]; then
+        echo "FAIL: src/proj_2.py does not exist"
+        teardown_test_env
+        return 1
+    fi
+
     assert_file_contains "src/proj_2.py" "from typing import" || {
         teardown_test_env
         return 1
     }
 
-    assert_file_contains "src/proj_2.py" "-> bool" || {
+    # Look for either "-> bool" or ") -> bool" (with space before arrow)
+    if ! grep -q "bool:" "src/proj_2.py" 2>/dev/null; then
+        echo "FAIL: File src/proj_2.py does not contain bool type hints"
         teardown_test_env
         return 1
-    }
+    fi
 
     teardown_test_env
     echo "PASS: Python has type hints"
