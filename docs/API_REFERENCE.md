@@ -1040,16 +1040,14 @@ validate_json_schema ".pipeline/state.json" "stage"
 | Code | Constant | Description |
 |------|----------|-------------|
 | 0 | E_SUCCESS | Success |
-| 1 | E_INVALID_ARGS | Invalid arguments |
-| 2 | E_DEPENDENCY_MISSING | Required dependency not found |
-| 3 | E_NETWORK_ERROR | Network/API call failed |
-| 4 | E_TEST_FAILURE | Tests failed |
-| 5 | E_STATE_ERROR | Invalid pipeline state |
+| 1 | E_GENERIC | Generic error |
+| 2 | E_INVALID_ARGS | Invalid arguments |
+| 3 | E_MISSING_DEPENDENCY | Required dependency not found |
+| 4 | E_NETWORK_FAILURE | Network/API call failed |
+| 5 | E_STATE_CORRUPTION | State file corrupted |
 | 6 | E_FILE_NOT_FOUND | Required file missing |
-| 7 | E_STATE_CORRUPTION | State file corrupted |
+| 7 | E_PERMISSION_DENIED | Permission denied |
 | 8 | E_TIMEOUT | Operation timeout |
-| 9 | E_GIT_ERROR | Git operation failed |
-| 13 | E_PERMISSION_DENIED | Permission denied |
 
 **Error Handling:**
 
@@ -1060,8 +1058,8 @@ exit $E_INVALID_ARGS
 
 # Retry on network errors
 if ! retry_command $MAX_RETRIES "acli jira project view"; then
-  log_error "Network error" $E_NETWORK_ERROR
-  exit $E_NETWORK_ERROR
+  log_error "Network error" $E_NETWORK_FAILURE
+  exit $E_NETWORK_FAILURE
 fi
 ```
 
@@ -1089,12 +1087,13 @@ log_debug "message"
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PIPELINE_DIR` | `.pipeline` | Pipeline directory location |
-| `DRY_RUN` | `0` | Dry-run mode (1=enabled) |
 | `VERBOSE` | `0` | Verbose logging (1=enabled) |
-| `NO_COLOR` | `0` | Disable colors (1=enabled) |
+| `DEBUG` | `0` | Debug mode (1=enabled) |
+| `DRY_RUN` | `0` | Dry-run mode (1=enabled) |
+| `LOG_FILE` | `.pipeline/errors.log` | Error log file location |
 | `MAX_RETRIES` | `3` | Network retry attempts |
-| `LOCK_TIMEOUT` | `30` | Lock acquisition timeout (seconds) |
+| `RETRY_DELAY` | `2` | Seconds between retry attempts |
+| `OPERATION_TIMEOUT` | `300` | Timeout for long operations (seconds) |
 
 ### Usage
 
@@ -1124,17 +1123,7 @@ fi
 
 ### Color Output
 
-**Disable colors:**
-```bash
-# Via environment
-export NO_COLOR=1
-pipeline.sh status
-
-# Via flag
-pipeline.sh status --no-color
-```
-
-**Color constants:**
+**Color constants used in pipeline output:**
 ```bash
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -1145,6 +1134,8 @@ NC='\033[0m'  # No Color
 echo -e "${GREEN}✓ Success${NC}"
 echo -e "${RED}✗ Error${NC}"
 ```
+
+**Note:** Color output is always enabled. To suppress colors, redirect output or use a terminal that doesn't support ANSI codes.
 
 ---
 
