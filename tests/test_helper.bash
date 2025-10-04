@@ -174,6 +174,17 @@ assert_file_contains() {
     return 0
 }
 
+# Assert string contains text
+assert_contains() {
+    local string="$1"
+    local text="$2"
+    if ! echo "$string" | grep -q "$text" 2>/dev/null; then
+        echo "FAIL: String does not contain: $text"
+        return 1
+    fi
+    return 0
+}
+
 # Assert command succeeds
 assert_success() {
     local cmd="$1"
