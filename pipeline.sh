@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Version
+readonly VERSION="1.0.0"
+
 # ============================================================================
 # ERROR HANDLING & LOGGING FRAMEWORK
 # ============================================================================
@@ -204,6 +207,10 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       POSITIONAL_ARGS+=("help")
       shift
+      ;;
+    --version|-V)
+      echo "Claude Pipeline v${VERSION}"
+      exit 0
       ;;
     *)
       POSITIONAL_ARGS+=("$1")
@@ -1382,6 +1389,7 @@ EOF
     echo "  -v, --verbose               Enable verbose output"
     echo "  -d, --debug                 Enable debug mode (implies --verbose)"
     echo "  -n, --dry-run               Dry-run mode (show what would happen without executing)"
+    echo "  -V, --version               Show version information"
     echo "  -h, --help                  Show this help message"
     echo ""
     echo "Stages:"

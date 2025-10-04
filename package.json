@@ -1,0 +1,62 @@
+{
+  "name": "@claude/pipeline",
+  "version": "1.0.0",
+  "description": "AI-powered TDD workflow automation - converts requirements to production-ready code with comprehensive tests",
+  "main": "pipeline.sh",
+  "bin": {
+    "claude-pipeline": "./bin/claude-pipeline"
+  },
+  "scripts": {
+    "test": "bash tests/run_all_tests.sh",
+    "install": "bash scripts/install.sh",
+    "uninstall": "bash scripts/uninstall.sh"
+  },
+  "keywords": [
+    "tdd",
+    "test-driven-development",
+    "automation",
+    "ci-cd",
+    "pipeline",
+    "code-generation",
+    "jira",
+    "gherkin",
+    "bdd",
+    "testing",
+    "workflow",
+    "ai-powered",
+    "claude",
+    "javascript",
+    "python",
+    "go",
+    "bash"
+  ],
+  "author": "Claude Code Agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/claude-code-agents.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anthropics/claude-code-agents/issues"
+  },
+  "homepage": "https://github.com/anthropics/claude-code-agents#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {},
+  "devDependencies": {},
+  "preferGlobal": true,
+  "files": [
+    "pipeline.sh",
+    "pipeline-state-manager.sh",
+    "bin/",
+    "scripts/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ]
+}
