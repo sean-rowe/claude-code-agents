@@ -85,21 +85,22 @@ test_python_has_type_hints() {
     run_pipeline stories >/dev/null
     run_pipeline work "PROJ-2" >/dev/null 2>&1
 
-    # Debug: check if file exists and show a sample
+    # Check if file exists
     if [ ! -f "src/proj_2.py" ]; then
         echo "FAIL: src/proj_2.py does not exist"
         teardown_test_env
         return 1
     fi
 
+    # Check for typing import
     assert_file_contains "src/proj_2.py" "from typing import" || {
         teardown_test_env
         return 1
     }
 
-    # Look for either "-> bool" or ") -> bool" (with space before arrow)
-    if ! grep -q "bool:" "src/proj_2.py" 2>/dev/null; then
-        echo "FAIL: File src/proj_2.py does not contain bool type hints"
+    # Look for actual type hint syntax (-> bool, -> Dict, etc) not in docstrings
+    if ! grep -qE '^\s*def\s+\w+\([^)]*\)\s*->\s*(bool|Dict|Any)' "src/proj_2.py" 2>/dev/null; then
+        echo "FAIL: File src/proj_2.py does not contain proper type hints"
         teardown_test_env
         return 1
     fi
@@ -145,16 +146,26 @@ test_python_has_real_validation_logic() {
     run_pipeline stories >/dev/null
     run_pipeline work "PROJ-2" >/dev/null 2>&1
 
-    # Check for actual validation logic, not just "return True"
-    assert_file_contains "src/proj_2.py" "isinstance" || {
+    # Verify NOT a stub - check for bare "return True" or "return False"
+    if grep -qE '^\s*return (True|False)\s*$' "src/proj_2.py"; then
+        echo "FAIL: Found stub code (bare return True/False)"
         teardown_test_env
         return 1
-    }
+    fi
 
-    assert_file_contains "src/proj_2.py" "is None" || {
+    # Check for actual isinstance type checking
+    if ! grep -q "isinstance(" "src/proj_2.py"; then
+        echo "FAIL: Missing isinstance() type checking logic"
         teardown_test_env
         return 1
-    }
+    fi
+
+    # Check for None checking
+    if ! grep -qE 'is (None|not None)' "src/proj_2.py"; then
+        echo "FAIL: Missing None checking logic"
+        teardown_test_env
+        return 1
+    fi
 
     teardown_test_env
     echo "PASS: Python has real validation logic (not stub)"

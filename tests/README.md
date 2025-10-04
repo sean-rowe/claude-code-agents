@@ -199,8 +199,9 @@ Current test coverage by stage:
 | work (Go) | 0% | 0 tests (to be added) |
 | work (Bash) | 0% | 0 tests (to be added) |
 | complete | 0% | 0 tests (to be added) |
+| cleanup | 0% | 0 tests (to be added) |
 
-**Overall:** ~60% pipeline coverage
+**Overall:** ~33% pipeline coverage (4 of 12 language/stage combinations tested)
 
 ## Future Tests
 

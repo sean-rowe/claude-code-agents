@@ -85,16 +85,26 @@ test_javascript_has_real_validation_logic() {
     run_pipeline stories >/dev/null
     run_pipeline work "PROJ-2" >/dev/null 2>&1
 
-    # Check for actual validation logic, not just "return true"
-    assert_file_contains "src/proj_2.js" "typeof data" || {
+    # Verify NOT a stub - check for "return true" or "return false" only
+    if grep -qE '^\s*return (true|false)\s*;?\s*$' "src/proj_2.js"; then
+        echo "FAIL: Found stub code (bare return true/false)"
         teardown_test_env
         return 1
-    }
+    fi
 
-    assert_file_contains "src/proj_2.js" "null" || {
+    # Check for actual type checking logic (must be in code, not comments)
+    if ! grep -qE 'typeof\s+\w+\s*===' "src/proj_2.js"; then
+        echo "FAIL: Missing typeof type checking logic"
         teardown_test_env
         return 1
-    }
+    fi
+
+    # Check for null/undefined handling
+    if ! grep -qE '(===|!==)\s*(null|undefined)' "src/proj_2.js"; then
+        echo "FAIL: Missing null/undefined checking logic"
+        teardown_test_env
+        return 1
+    fi
 
     teardown_test_env
     echo "PASS: JavaScript has real validation logic (not stub)"

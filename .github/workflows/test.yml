@@ -78,11 +78,13 @@ jobs:
         sudo apt-get install -y shellcheck
 
     - name: Run ShellCheck on pipeline.sh
-      run: shellcheck pipeline.sh || true
+      run: shellcheck pipeline.sh
+      continue-on-error: true
 
     - name: Run ShellCheck on test scripts
       run: |
-        find tests -name "*.sh" -o -name "*.bash" | xargs shellcheck || true
+        find tests -name "*.sh" -o -name "*.bash" | xargs shellcheck
+      continue-on-error: true
 
   coverage:
     name: Test Coverage Report
