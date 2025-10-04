@@ -12,13 +12,13 @@ ensure_pipeline_dir() {
     if [ ! -d "$PIPELINE_DIR" ]; then
         mkdir -p "$PIPELINE_DIR"
         echo "✓ Created $PIPELINE_DIR directory for pipeline state"
+    fi
 
-        # Add to .gitignore if it exists
-        if [ -f .gitignore ]; then
-            if ! grep -q "^\.pipeline" .gitignore; then
-                echo ".pipeline/" >> .gitignore
-                echo "✓ Added .pipeline to .gitignore"
-            fi
+    # Always ensure .gitignore is updated (even if directory already exists)
+    if [ -f .gitignore ]; then
+        if ! grep -q "^\.pipeline" .gitignore; then
+            echo ".pipeline/" >> .gitignore
+            echo "✓ Added .pipeline to .gitignore"
         fi
     fi
 }

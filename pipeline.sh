@@ -5,11 +5,218 @@
 
 set -euo pipefail
 
+# ============================================================================
+# ERROR HANDLING & LOGGING FRAMEWORK
+# ============================================================================
+
+# Error codes
+readonly E_SUCCESS=0
+readonly E_GENERIC=1
+readonly E_INVALID_ARGS=2
+readonly E_MISSING_DEPENDENCY=3
+readonly E_NETWORK_FAILURE=4
+readonly E_STATE_CORRUPTION=5
+readonly E_FILE_NOT_FOUND=6
+readonly E_PERMISSION_DENIED=7
+readonly E_TIMEOUT=8
+
+# Configuration
+VERBOSE=${VERBOSE:-0}
+DEBUG=${DEBUG:-0}
+DRY_RUN=${DRY_RUN:-0}
+LOG_FILE=".pipeline/errors.log"
+MAX_RETRIES=${MAX_RETRIES:-3}
+RETRY_DELAY=${RETRY_DELAY:-2}
+OPERATION_TIMEOUT=${OPERATION_TIMEOUT:-300}
+
+# Initialize logging
+init_logging() {
+  if [ ! -d ".pipeline" ]; then
+    mkdir -p ".pipeline"
+  fi
+  touch "$LOG_FILE"
+}
+
+# Logging functions
+log_error() {
+  local msg="$1"
+  local code="${2:-$E_GENERIC}"
+  echo "[ERROR $(date '+%Y-%m-%d %H:%M:%S')] [Code: $code] $msg" | tee -a "$LOG_FILE" >&2
+}
+
+log_warn() {
+  local msg="$1"
+  echo "[WARN $(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a "$LOG_FILE" >&2
+}
+
+log_info() {
+  local msg="$1"
+  if [ "$VERBOSE" -eq 1 ] || [ "$DEBUG" -eq 1 ]; then
+    echo "[INFO $(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a "$LOG_FILE"
+  fi
+}
+
+log_debug() {
+  local msg="$1"
+  if [ "$DEBUG" -eq 1 ]; then
+    echo "[DEBUG $(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a "$LOG_FILE"
+  fi
+}
+
+# Retry logic for network operations
+retry_command() {
+  local max_attempts="$1"
+  shift
+  local cmd="$@"
+  local attempt=1
+
+  log_debug "Executing with retry: $cmd"
+
+  while [ $attempt -le $max_attempts ]; do
+    log_debug "Attempt $attempt/$max_attempts"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log_info "[DRY-RUN] Would execute: $cmd"
+      return $E_SUCCESS
+    fi
+
+    if eval "$cmd"; then
+      log_debug "Command succeeded on attempt $attempt"
+      return $E_SUCCESS
+    fi
+
+    if [ $attempt -lt $max_attempts ]; then
+      log_warn "Command failed (attempt $attempt/$max_attempts), retrying in ${RETRY_DELAY}s..."
+      sleep $RETRY_DELAY
+    fi
+
+    ((attempt++))
+  done
+
+  log_error "Command failed after $max_attempts attempts: $cmd" $E_NETWORK_FAILURE
+  return $E_NETWORK_FAILURE
+}
+
+# Timeout wrapper
+with_timeout() {
+  local timeout="$1"
+  shift
+  local cmd="$@"
+
+  log_debug "Executing with timeout (${timeout}s): $cmd"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log_info "[DRY-RUN] Would execute with timeout: $cmd"
+    return $E_SUCCESS
+  fi
+
+  timeout "$timeout" bash -c "$cmd"
+  local exit_code=$?
+
+  if [ $exit_code -eq 124 ]; then
+    log_error "Command timed out after ${timeout}s: $cmd" $E_TIMEOUT
+    return $E_TIMEOUT
+  fi
+
+  return $exit_code
+}
+
+# Check for required commands
+require_command() {
+  local cmd="$1"
+  local install_hint="${2:-Install $cmd to continue}"
+
+  if ! command -v "$cmd" &>/dev/null; then
+    log_error "Required command not found: $cmd. $install_hint" $E_MISSING_DEPENDENCY
+    return $E_MISSING_DEPENDENCY
+  fi
+
+  log_debug "Found required command: $cmd"
+  return $E_SUCCESS
+}
+
+# Validate file exists
+require_file() {
+  local file="$1"
+  local hint="${2:-File is required: $file}"
+
+  if [ ! -f "$file" ]; then
+    log_error "Required file not found: $file. $hint" $E_FILE_NOT_FOUND
+    return $E_FILE_NOT_FOUND
+  fi
+
+  log_debug "Found required file: $file"
+  return $E_SUCCESS
+}
+
+# Error handler for uncaught errors
+error_handler() {
+  local line_no=$1
+  local bash_lineno=$2
+  local last_command=$3
+  local exit_code=$4
+
+  log_error "Uncaught error at line $line_no: $last_command (exit code: $exit_code)" $exit_code
+
+  # Cleanup on error if needed
+  if [ -f ".pipeline/.lock" ]; then
+    rm -f ".pipeline/.lock"
+    log_debug "Removed stale lock file"
+  fi
+
+  exit $exit_code
+}
+
+# Set trap for error handling
+trap 'error_handler ${LINENO} ${BASH_LINENO} "$BASH_COMMAND" $?' ERR
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
 # Load state manager
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/pipeline-state-manager.sh" ]; then
   source "$SCRIPT_DIR/pipeline-state-manager.sh"
+  log_debug "Loaded state manager"
 fi
+
+# Parse flags
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --verbose|-v)
+      VERBOSE=1
+      log_info "Verbose mode enabled"
+      shift
+      ;;
+    --debug|-d)
+      DEBUG=1
+      VERBOSE=1
+      log_info "Debug mode enabled"
+      shift
+      ;;
+    --dry-run|-n)
+      DRY_RUN=1
+      log_info "Dry-run mode enabled (no changes will be made)"
+      shift
+      ;;
+    --help|-h)
+      POSITIONAL_ARGS+=("help")
+      shift
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# Restore positional parameters
+set -- "${POSITIONAL_ARGS[@]}"
+
+# Initialize logging after parsing flags
+init_logging
 
 # Validate arguments
 if [ $# -eq 0 ]; then
@@ -20,6 +227,8 @@ else
   shift
   ARGS="$@"
 fi
+
+log_debug "Stage: $STAGE, Args: $ARGS"
 
 case "$STAGE" in
   requirements)
@@ -1091,17 +1300,23 @@ EOF
   help|*)
     echo "Pipeline Controller"
     echo ""
-    echo "Usage: ./pipeline.sh [stage] [options]"
+    echo "Usage: ./pipeline.sh [options] [stage] [args...]"
+    echo ""
+    echo "Options:"
+    echo "  -v, --verbose               Enable verbose output"
+    echo "  -d, --debug                 Enable debug mode (implies --verbose)"
+    echo "  -n, --dry-run               Dry-run mode (show what would happen without executing)"
+    echo "  -h, --help                  Show this help message"
     echo ""
     echo "Stages:"
-    echo "  requirements 'description'  - Generate requirements"
-    echo "  gherkin                     - Create Gherkin scenarios"
-    echo "  stories                     - Create JIRA hierarchy"
-    echo "  work STORY-ID               - Implement story"
-    echo "  complete STORY-ID           - Complete story"
-    echo "  cleanup                     - Remove .pipeline directory"
-    echo "  status                      - Show current state"
-    echo "  help                        - Show this help message"
+    echo "  requirements 'description'  Generate requirements from description"
+    echo "  gherkin                     Create Gherkin scenarios from requirements"
+    echo "  stories                     Create JIRA hierarchy (Epic + Stories)"
+    echo "  work STORY-ID               Implement story with TDD workflow"
+    echo "  complete STORY-ID           Complete story (merge, close)"
+    echo "  cleanup                     Remove .pipeline directory"
+    echo "  status                      Show current pipeline state"
+    echo "  help                        Show this help message"
     echo ""
     echo "Example workflow:"
     echo "  ./pipeline.sh requirements 'Build auth system'"
@@ -1110,5 +1325,30 @@ EOF
     echo "  ./pipeline.sh work PROJ-2"
     echo "  ./pipeline.sh complete PROJ-2"
     echo "  ./pipeline.sh cleanup"
+    echo ""
+    echo "Example with options:"
+    echo "  ./pipeline.sh --verbose work PROJ-2"
+    echo "  ./pipeline.sh --dry-run --debug gherkin"
+    echo ""
+    echo "Environment Variables:"
+    echo "  VERBOSE=1                   Same as --verbose"
+    echo "  DEBUG=1                     Same as --debug"
+    echo "  DRY_RUN=1                   Same as --dry-run"
+    echo "  MAX_RETRIES=3               Number of retries for network operations"
+    echo "  RETRY_DELAY=2               Delay (seconds) between retries"
+    echo "  OPERATION_TIMEOUT=300       Timeout (seconds) for long operations"
+    echo ""
+    echo "Error Codes:"
+    echo "  0   Success"
+    echo "  1   Generic error"
+    echo "  2   Invalid arguments"
+    echo "  3   Missing dependency"
+    echo "  4   Network failure"
+    echo "  5   State corruption"
+    echo "  6   File not found"
+    echo "  7   Permission denied"
+    echo "  8   Operation timeout"
+    echo ""
+    echo "Logs are written to: .pipeline/errors.log"
     ;;
 esac
