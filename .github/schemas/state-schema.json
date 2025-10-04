@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/anthropics/claude-code-agents/schemas/state.json",
+  "title": "Pipeline State Schema",
+  "description": "Schema for .pipeline/state.json - tracks pipeline execution state",
+  "type": "object",
+  "required": ["stage", "stories", "createdAt", "updatedAt"],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": ["init", "requirements", "gherkin", "stories", "work", "complete"],
+      "description": "Current pipeline stage"
+    },
+    "epicId": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$",
+      "description": "JIRA Epic ID (e.g., PROJ-1)"
+    },
+    "currentStory": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$",
+      "description": "Currently active story ID (e.g., PROJ-2)"
+    },
+    "branch": {
+      "type": "string",
+      "pattern": "^feature/.+$",
+      "description": "Git feature branch name (e.g., feature/PROJ-2)"
+    },
+    "stories": {
+      "type": "array",
+      "description": "Array of all stories in this Epic",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z]+-[0-9]+$",
+            "description": "Story ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed"],
+            "description": "Story status"
+          },
+          "feature": {
+            "type": "string",
+            "description": "Path to feature file"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when story was completed"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Feature branch for this story"
+          },
+          "prUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Pull request URL"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Pipeline initialization timestamp (ISO 8601)"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp (ISO 8601)"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Pipeline version that created this state (semver)"
+    },
+    "projectType": {
+      "type": "string",
+      "enum": ["javascript", "python", "go", "bash", "unknown"],
+      "description": "Detected project type"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "jiraProject": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "stage": "work",
+      "epicId": "PROJ-1",
+      "currentStory": "PROJ-2",
+      "branch": "feature/PROJ-2",
+      "stories": [
+        {
+          "id": "PROJ-2",
+          "status": "in_progress",
+          "feature": ".pipeline/features/authentication.feature",
+          "createdAt": "2025-10-04T10:15:00Z"
+        },
+        {
+          "id": "PROJ-3",
+          "status": "pending",
+          "feature": ".pipeline/features/authorization.feature",
+          "createdAt": "2025-10-04T10:15:00Z"
+        }
+      ],
+      "createdAt": "2025-10-04T10:00:00Z",
+      "updatedAt": "2025-10-04T10:30:00Z",
+      "version": "1.0.0",
+      "projectType": "javascript"
+    }
+  ]
+}
