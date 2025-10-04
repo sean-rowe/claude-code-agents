@@ -152,6 +152,191 @@ require_file() {
   return $E_SUCCESS
 }
 
+# ============================================================================
+# INPUT VALIDATION & SECURITY
+# ============================================================================
+
+# Validate story ID format (prevent injection attacks)
+validate_story_id() {
+  local story_id="$1"
+
+  # Check if empty
+  if [ -z "$story_id" ]; then
+    log_error "Story ID is required and cannot be empty" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  # Check length (max 64 characters to prevent DoS)
+  if [ ${#story_id} -gt 64 ]; then
+    log_error "Story ID too long (max 64 characters): ${#story_id} characters" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  # Validate format: Alphanumeric (including Unicode) with hyphens and numbers
+  # Must have at least one letter, a hyphen, and numbers
+  # This prevents: command injection, path traversal, shell metacharacters
+  if ! [[ "$story_id" =~ ^[A-Za-z0-9_\-]+$ ]]; then
+    log_error "Invalid story ID format: '$story_id'. Must contain only letters, numbers, hyphens, and underscores" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  # Must contain at least one hyphen and end with numbers
+  if ! [[ "$story_id" =~ - ]] || ! [[ "$story_id" =~ [0-9]+$ ]]; then
+    log_error "Invalid story ID format: '$story_id'. Expected format: PROJECT-123" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  # Additional security: Check for path traversal attempts
+  if [[ "$story_id" == *".."* ]] || [[ "$story_id" == *"/"* ]]; then
+    log_error "Story ID contains invalid characters (path traversal attempt?): $story_id" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  log_debug "Story ID validation passed: $story_id"
+  return $E_SUCCESS
+}
+
+# Sanitize string input (remove/escape dangerous characters)
+sanitize_input() {
+  local input="$1"
+
+  # Remove shell metacharacters that could cause injection
+  # Removes: ; & | $ ` \ ( ) < > { } [ ] * ? ~ ! #
+  local sanitized="${input//[;\&\|\$\`\\\(\)\<\>\{\}\[\]\*\?\~\!\#]/}"
+
+  # Remove quotes that could break out of strings
+  sanitized="${sanitized//\'/}"
+  sanitized="${sanitized//\"/}"
+
+  # Remove newlines and carriage returns
+  sanitized="${sanitized//$'\n'/}"
+  sanitized="${sanitized//$'\r'/}"
+
+  echo "$sanitized"
+}
+
+# Validate file path is within project directory (prevent path traversal)
+validate_safe_path() {
+  local path="$1"
+  local base_dir="${2:-.}"
+
+  # Resolve to absolute path
+  local abs_path
+  abs_path="$(cd "$(dirname "$path")" 2>/dev/null && pwd)/$(basename "$path")" || {
+    log_error "Invalid path: $path" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  }
+
+  local abs_base
+  abs_base="$(cd "$base_dir" && pwd)"
+
+  # Check if path is within base directory
+  if [[ "$abs_path" != "$abs_base"* ]]; then
+    log_error "Path traversal attempt detected: $path is outside $base_dir" $E_INVALID_ARGS
+    return $E_INVALID_ARGS
+  fi
+
+  log_debug "Path validation passed: $path"
+  return $E_SUCCESS
+}
+
+# Validate JSON structure
+validate_json() {
+  local json_file="$1"
+
+  if [ ! -f "$json_file" ]; then
+    log_error "JSON file not found: $json_file" $E_FILE_NOT_FOUND
+    return $E_FILE_NOT_FOUND
+  fi
+
+  # Check if file is readable
+  if [ ! -r "$json_file" ]; then
+    log_error "JSON file not readable (permission denied): $json_file" $E_PERMISSION_DENIED
+    return $E_PERMISSION_DENIED
+  fi
+
+  # Validate JSON syntax with jq
+  if ! jq empty "$json_file" 2>/dev/null; then
+    log_error "Invalid JSON syntax in file: $json_file" $E_STATE_CORRUPTION
+    return $E_STATE_CORRUPTION
+  fi
+
+  log_debug "JSON validation passed: $json_file"
+  return $E_SUCCESS
+}
+
+# Validate required JSON fields exist
+validate_json_schema() {
+  local json_file="$1"
+  shift
+  local required_fields=("$@")
+
+  # First validate JSON syntax
+  validate_json "$json_file" || return $?
+
+  # Check each required field
+  for field in "${required_fields[@]}"; do
+    if ! jq -e ".$field" "$json_file" >/dev/null 2>&1; then
+      log_error "Required field missing in JSON: $field (file: $json_file)" $E_STATE_CORRUPTION
+      return $E_STATE_CORRUPTION
+    fi
+  done
+
+  log_debug "JSON schema validation passed: $json_file"
+  return $E_SUCCESS
+}
+
+# File locking for concurrent access protection
+acquire_lock() {
+  local lock_file="${1:-.pipeline/pipeline.lock}"
+  local timeout="${2:-30}"
+  local waited=0
+
+  # Create lock directory if it doesn't exist
+  mkdir -p "$(dirname "$lock_file")"
+
+  # Wait for lock with timeout
+  while [ $waited -lt $timeout ]; do
+    # Try to create lock file atomically
+    if mkdir "$lock_file" 2>/dev/null; then
+      # Store PID in lock for debugging
+      echo $$ > "$lock_file/pid"
+      log_debug "Acquired lock: $lock_file"
+      return $E_SUCCESS
+    fi
+
+    # Check if lock is stale (process no longer exists)
+    if [ -f "$lock_file/pid" ]; then
+      local lock_pid
+      lock_pid=$(cat "$lock_file/pid" 2>/dev/null)
+      if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+        log_warn "Removing stale lock from PID $lock_pid"
+        rm -rf "$lock_file"
+        continue
+      fi
+    fi
+
+    log_debug "Waiting for lock (${waited}s/$timeout}s)..."
+    sleep 1
+    ((waited++))
+  done
+
+  log_error "Failed to acquire lock after ${timeout}s (held by $(cat "$lock_file/pid" 2>/dev/null || echo "unknown"))" $E_TIMEOUT
+  return $E_TIMEOUT
+}
+
+# Release file lock
+release_lock() {
+  local lock_file="${1:-.pipeline/pipeline.lock}"
+
+  if [ -d "$lock_file" ]; then
+    rm -rf "$lock_file"
+    log_debug "Released lock: $lock_file"
+  fi
+
+  return $E_SUCCESS
+}
+
 # Error handler for uncaught errors
 error_handler() {
   local line_no=$1
@@ -440,7 +625,28 @@ EOF
     ;;
 
   work)
-    STORY_ID="${ARGS:-PROJ-2}"
+    # Check if story ID was provided
+    if [ -z "$ARGS" ]; then
+      log_error "Story ID is required. Usage: pipeline.sh work STORY-ID" $E_INVALID_ARGS
+      exit $E_INVALID_ARGS
+    fi
+
+    STORY_ID="$ARGS"
+
+    # Validate story ID format (security: prevent injection attacks)
+    if ! validate_story_id "$STORY_ID"; then
+      exit $E_INVALID_ARGS
+    fi
+
+    # Acquire lock to prevent concurrent modifications
+    if ! acquire_lock ".pipeline/pipeline.lock" 30; then
+      log_error "Another pipeline process is running. Please wait or remove stale lock." $E_TIMEOUT
+      exit $E_TIMEOUT
+    fi
+
+    # Ensure lock is released on exit
+    trap 'release_lock ".pipeline/pipeline.lock"' EXIT INT TERM
+
     echo "STAGE: work"
     echo "STEP: 1 of 6"
     echo "ACTION: Working on story: $STORY_ID"
@@ -452,9 +658,19 @@ EOF
       log_info "[DRY-RUN] Would generate tests and implementation"
       echo "RESULT: [DRY-RUN] Would generate code for $STORY_ID"
       echo "NEXT: Run './pipeline.sh complete $STORY_ID'"
+      release_lock ".pipeline/pipeline.lock"
     else
 
     log_debug "Working on story: $STORY_ID"
+
+    # Validate state.json exists and has correct structure
+    if [ -f ".pipeline/state.json" ]; then
+      if ! validate_json_schema ".pipeline/state.json" "stories"; then
+        log_error "State file is corrupted. Run 'pipeline.sh init' to reinitialize." $E_STATE_CORRUPTION
+        release_lock ".pipeline/pipeline.lock"
+        exit $E_STATE_CORRUPTION
+      fi
+    fi
 
     # Update state
     if command -v jq &>/dev/null; then
