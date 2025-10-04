@@ -3,7 +3,7 @@
 # Claude Code Agents Installation Script
 # https://github.com/sean-rowe/claude-code-agents
 
-set -e
+set -euo pipefail
 
 CLAUDE_DIR="$HOME/.claude"
 REPO_URL="https://github.com/sean-rowe/claude-code-agents.git"

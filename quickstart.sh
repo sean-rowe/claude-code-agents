@@ -3,7 +3,7 @@
 # Claude Code Agents Quick Start
 # Gets you up and running in seconds
 
-set -e
+set -euo pipefail
 
 # Colors
 GREEN='\033[0;32m'
