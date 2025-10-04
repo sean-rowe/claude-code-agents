@@ -1,0 +1,38 @@
+FROM ubuntu:22.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    bash \
+    git \
+    jq \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18.x
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+# Create test directory
+WORKDIR /test
+
+# Copy package files
+COPY package.json ./
+COPY bin/ ./bin/
+COPY pipeline.sh ./
+COPY pipeline-state-manager.sh ./
+COPY scripts/ ./scripts/
+COPY tests/ ./tests/
+COPY docs/ ./docs/
+COPY README.md ./
+COPY LICENSE ./
+COPY INSTALL.md ./
+
+# Install package globally
+RUN npm install -g file:$(pwd)
+
+# Verify installation
+RUN claude-pipeline --version
+RUN claude-pipeline --help
+
+# Run tests
+CMD ["npm", "test"]

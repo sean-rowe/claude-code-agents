@@ -8,8 +8,7 @@
   },
   "scripts": {
     "test": "bash tests/run_all_tests.sh",
-    "install": "bash scripts/install.sh",
-    "uninstall": "bash scripts/uninstall.sh"
+    "postinstall": "bash scripts/install.sh"
   },
   "keywords": [
     "tdd",
@@ -56,7 +55,9 @@
     "bin/",
     "scripts/",
     "docs/",
+    "tests/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "INSTALL.md"
   ]
 }

@@ -1,10 +1,8 @@
 class ClaudePipeline < Formula
   desc "AI-powered TDD workflow automation - requirements to production-ready code"
   homepage "https://github.com/anthropics/claude-code-agents"
-  url "https://github.com/anthropics/claude-code-agents/archive/v1.0.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"  # Will be updated on release
+  head "https://github.com/anthropics/claude-code-agents.git", branch: "main"
   license "MIT"
-  version "1.0.0"
 
   depends_on "bash" => :build
   depends_on "jq" => :recommended
