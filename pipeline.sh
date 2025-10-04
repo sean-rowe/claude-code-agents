@@ -271,9 +271,36 @@ EOF
       TEST_DIR="tests"
       mkdir -p "$TEST_DIR"
 
+      # Add __init__.py to make tests a package
+      if [ ! -f "$TEST_DIR/__init__.py" ]; then
+        touch "$TEST_DIR/__init__.py"
+      fi
+
       cat > "$TEST_DIR/test_${STORY_NAME}.py" <<EOF
 import pytest
-from ${STORY_NAME} import implement, validate
+import sys
+from pathlib import Path
+
+# Add project root to path to support imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import from implementation (supports src/, package dir, or root)
+try:
+    from src.${STORY_NAME} import implement, validate
+except ImportError:
+    try:
+        from ${STORY_NAME} import implement, validate
+    except ImportError:
+        # If in a package directory, try importing from there
+        import importlib.util
+        spec = importlib.util.find_spec('${STORY_NAME}')
+        if spec:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            implement = module.implement
+            validate = module.validate
+        else:
+            raise
 
 def test_${STORY_NAME}_implementation():
     result = implement()
@@ -326,6 +353,18 @@ module.exports = {
 EOF
       echo "✓ Created implementation: $TEST_DIR/${STORY_NAME}.js"
 
+      # Validate JavaScript syntax
+      if command -v node &>/dev/null; then
+        echo "Validating JavaScript syntax..."
+        if node --check "$TEST_DIR/${STORY_NAME}.js" 2>/dev/null && node --check "$TEST_DIR/${STORY_NAME}.test.js" 2>/dev/null; then
+          echo "✓ JavaScript syntax valid"
+        else
+          echo "⚠ JavaScript syntax validation failed"
+          node --check "$TEST_DIR/${STORY_NAME}.js" 2>&1 || true
+          node --check "$TEST_DIR/${STORY_NAME}.test.js" 2>&1 || true
+        fi
+      fi
+
     elif [ -f go.mod ]; then
       # Go - create in project root
       PACKAGE_NAME=$(grep "^module" go.mod | awk '{print $2}' | xargs basename)
@@ -343,6 +382,18 @@ func Validate${STORY_ID//-/_}() bool {
 }
 EOF
       echo "✓ Created implementation: ${STORY_NAME}.go"
+
+      # Validate Go syntax
+      if command -v go &>/dev/null; then
+        echo "Validating Go syntax..."
+        if go vet "./${STORY_NAME}.go" 2>/dev/null && go vet "./${STORY_NAME}_test.go" 2>/dev/null; then
+          echo "✓ Go syntax valid"
+        else
+          echo "⚠ Go syntax validation warnings"
+          go vet "./${STORY_NAME}.go" 2>&1 || true
+          go vet "./${STORY_NAME}_test.go" 2>&1 || true
+        fi
+      fi
 
     elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then
       # Python - determine proper location
@@ -367,6 +418,13 @@ EOF
       fi
 
       mkdir -p "$IMPL_DIR"
+
+      # Add __init__.py to make it a proper Python package
+      if [ "$IMPL_DIR" != "." ] && [ ! -f "$IMPL_DIR/__init__.py" ]; then
+        touch "$IMPL_DIR/__init__.py"
+        echo "✓ Created $IMPL_DIR/__init__.py (Python package)"
+      fi
+
       cat > "$IMPL_DIR/${STORY_NAME}.py" <<EOF
 # Implementation for $STORY_ID
 
@@ -377,6 +435,18 @@ def validate():
     return True
 EOF
       echo "✓ Created implementation: $IMPL_DIR/${STORY_NAME}.py"
+
+      # Validate Python syntax
+      if command -v python3 &>/dev/null; then
+        echo "Validating Python syntax..."
+        if python3 -m py_compile "$IMPL_DIR/${STORY_NAME}.py" 2>/dev/null && python3 -m py_compile "$TEST_DIR/test_${STORY_NAME}.py" 2>/dev/null; then
+          echo "✓ Python syntax valid"
+        else
+          echo "⚠ Python syntax validation failed"
+          python3 -m py_compile "$IMPL_DIR/${STORY_NAME}.py" 2>&1 || true
+          python3 -m py_compile "$TEST_DIR/test_${STORY_NAME}.py" 2>&1 || true
+        fi
+      fi
 
     else
       # Generic bash script in project root
@@ -389,6 +459,17 @@ exit 0
 EOF
       chmod +x "${STORY_NAME}.sh"
       echo "✓ Created implementation: ${STORY_NAME}.sh"
+
+      # Validate Bash syntax
+      if command -v bash &>/dev/null; then
+        echo "Validating Bash syntax..."
+        if bash -n "${STORY_NAME}.sh" 2>/dev/null; then
+          echo "✓ Bash syntax valid"
+        else
+          echo "⚠ Bash syntax validation failed"
+          bash -n "${STORY_NAME}.sh" 2>&1 || true
+        fi
+      fi
     fi
 
     # Step 4: Run tests to verify
@@ -406,6 +487,16 @@ EOF
       if command -v pytest &>/dev/null; then
         echo "Running pytest..."
         pytest 2>&1 | tee .pipeline/work/test_output.log || TEST_PASSED=false
+      else
+        echo ""
+        echo "⚠ pytest not found - cannot run Python tests"
+        echo ""
+        echo "To install pytest:"
+        echo "  pip install pytest"
+        echo "Or add to requirements.txt:"
+        echo "  echo 'pytest' >> requirements.txt && pip install -r requirements.txt"
+        echo ""
+        TEST_PASSED=false
       fi
     else
       if [ -f "tests/${STORY_NAME}_test.sh" ]; then
@@ -417,7 +508,17 @@ EOF
     if [ "$TEST_PASSED" = true ]; then
       echo "✓ Tests passed"
     else
-      echo "⚠ Tests failed - review .pipeline/work/test_output.log"
+      echo ""
+      echo "❌ Tests failed - review output above or .pipeline/work/test_output.log"
+      echo ""
+      echo "Common causes and fixes:"
+      echo "  • Import errors (Python): Check that modules are in PYTHONPATH"
+      echo "  • Missing dependencies: Run npm install / pip install -r requirements.txt / go mod tidy"
+      echo "  • Syntax errors: Review validation output above"
+      echo "  • Test framework not installed: npm install --save-dev jest / pip install pytest"
+      echo ""
+      echo "To retry after fixing: ./pipeline.sh work $STORY_ID"
+      echo ""
     fi
 
     echo ""
@@ -465,9 +566,17 @@ EOF
         echo "✓ Changes pushed to remote"
       else
         echo ""
-        echo "⚠ Push to remote failed"
+        echo "❌ Failed to push to remote repository"
+        echo ""
+        echo "Common causes and fixes:"
+        echo "  • No remote configured: git remote add origin <repository-url>"
+        echo "  • No write permissions: Check GitHub/GitLab access for this repository"
+        echo "  • Branch protection rules: May require pull request instead of direct push"
+        echo "  • Authentication failed: Update credentials or use SSH key"
+        echo "  • Network issues: Check internet connection"
+        echo ""
         echo "Branch created locally: $BRANCH_NAME"
-        echo "To push later, run: git push -u origin $BRANCH_NAME"
+        echo "To push manually after fixing: git push -u origin $BRANCH_NAME"
         echo ""
       fi
     else
