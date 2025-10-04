@@ -1126,7 +1126,7 @@ process_batch() {
 
     local error="null"
     if [ \$successful -ne \$total ]; then
-        error="\"$((total - successful)) items failed\""
+        error="\"\$((total - successful)) items failed\""
     fi
 
     echo "{\"success\":\$([ \$successful -eq \$total ] && echo true || echo false),\"error\":\$error,\"processed\":\$successful,\"total\":\$total,\"results\":\$results}"

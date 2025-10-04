@@ -47,7 +47,8 @@ run_validation() {
             ((TOTAL_FAILED++))
         fi
     else
-        echo -e "${YELLOW}⊘ $language validation SKIPPED (test not found)${NC}"
+        echo -e "${RED}✗ $language validation MISSING - test script not found: $test_script${NC}"
+        ((TOTAL_FAILED++))
     fi
 
     echo ""
