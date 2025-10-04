@@ -8,6 +8,55 @@ set -euo pipefail
 # Version
 readonly VERSION="1.0.0"
 
+# Version compatibility check
+check_state_version() {
+  local state_file="${1:-.pipeline/state.json}"
+
+  if [ ! -f "$state_file" ]; then
+    return 0  # No state file, nothing to check
+  fi
+
+  if ! command -v jq &>/dev/null; then
+    log_warn "jq not installed - skipping version compatibility check"
+    return 0
+  fi
+
+  local state_version
+  state_version=$(jq -r '.version // "0.0.0"' "$state_file" 2>/dev/null || echo "0.0.0")
+
+  local current_major current_minor
+  current_major=$(echo "$VERSION" | cut -d. -f1)
+  current_minor=$(echo "$VERSION" | cut -d. -f2)
+
+  local state_major state_minor
+  state_major=$(echo "$state_version" | cut -d. -f1)
+  state_minor=$(echo "$state_version" | cut -d. -f2)
+
+  # Check major version compatibility
+  if [ "$current_major" != "$state_major" ]; then
+    log_error "State file version mismatch: state is v$state_version, pipeline is v$VERSION" 1
+    echo "" >&2
+    echo "MIGRATION REQUIRED:" >&2
+    echo "  Your state file was created with v$state_version" >&2
+    echo "  Current pipeline version is v$VERSION" >&2
+    echo "" >&2
+    echo "Options:" >&2
+    echo "  1. Migrate state: ./scripts/migrate-state.sh" >&2
+    echo "  2. Start fresh: rm -rf .pipeline && pipeline.sh init" >&2
+    echo "  3. Downgrade: git checkout v$state_version" >&2
+    echo "" >&2
+    return 1
+  fi
+
+  # Warn on minor version mismatch
+  if [ "$current_minor" != "$state_minor" ]; then
+    log_warn "State file version is v$state_version, pipeline is v$VERSION"
+    log_warn "State file may be outdated but should be compatible"
+  fi
+
+  return 0
+}
+
 # ============================================================================
 # ERROR HANDLING & LOGGING FRAMEWORK
 # ============================================================================
