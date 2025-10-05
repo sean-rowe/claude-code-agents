@@ -190,8 +190,32 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "No .pipeline directories found in current directory"
   else
     echo "Found .pipeline directories:"
-    echo "$PIPELINE_DIRS"
     echo ""
+
+    # Check for active work
+    HAS_ACTIVE_WORK=false
+    while read -r dir; do
+      if [ -f "$dir/state.json" ]; then
+        # Extract stage from state.json to detect active work
+        STAGE=$(jq -r '.stage // "unknown"' "$dir/state.json" 2>/dev/null || echo "unknown")
+        if [ "$STAGE" != "complete" ] && [ "$STAGE" != "unknown" ]; then
+          echo -e "  ${YELLOW}⚠${NC}  $dir (active work detected: stage=$STAGE)"
+          HAS_ACTIVE_WORK=true
+        else
+          echo "  • $dir"
+        fi
+      else
+        echo "  • $dir"
+      fi
+    done <<< "$PIPELINE_DIRS"
+
+    echo ""
+    if [ "$HAS_ACTIVE_WORK" = true ]; then
+      echo -e "${YELLOW}WARNING: Some directories have active work in progress!${NC}"
+      echo "Removing these directories will lose your current pipeline state."
+      echo ""
+    fi
+
     read -p "Remove these directories? (y/N) " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
