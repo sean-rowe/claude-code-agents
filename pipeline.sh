@@ -386,6 +386,25 @@ release_lock() {
   return $E_SUCCESS
 }
 
+# Backup state before modifications
+backup_state() {
+  if [ -f ".pipeline/state.json" ]; then
+    cp ".pipeline/state.json" ".pipeline/state.json.backup"
+    log_debug "State backed up to .pipeline/state.json.backup"
+    return $E_SUCCESS
+  fi
+  return $E_FILE_NOT_FOUND
+}
+
+# Commit state backup (remove backup after successful operation)
+commit_state() {
+  if [ -f ".pipeline/state.json.backup" ]; then
+    rm -f ".pipeline/state.json.backup"
+    log_debug "State backup committed (removed)"
+  fi
+  return $E_SUCCESS
+}
+
 # Error handler for uncaught errors
 error_handler() {
   local line_no=$1
@@ -395,11 +414,46 @@ error_handler() {
 
   log_error "Uncaught error at line $line_no: $last_command (exit code: $exit_code)" $exit_code
 
-  # Cleanup on error if needed
+  # Perform rollback operations
+  log_info "Performing cleanup and rollback..."
+
+  # Remove lock file if present
   if [ -f ".pipeline/.lock" ]; then
     rm -f ".pipeline/.lock"
     log_debug "Removed stale lock file"
   fi
+
+  # Restore state backup if it exists
+  if [ -f ".pipeline/state.json.backup" ]; then
+    if [ -f ".pipeline/state.json" ]; then
+      local current_stage
+      current_stage=$(jq -r '.current_stage // "unknown"' .pipeline/state.json 2>/dev/null || echo "unknown")
+      log_warn "Restoring previous state (was in stage: $current_stage)"
+      cp ".pipeline/state.json.backup" ".pipeline/state.json"
+      log_info "State restored from backup"
+    fi
+  fi
+
+  # Clean up temporary files
+  if [ -d ".pipeline/temp" ]; then
+    rm -rf ".pipeline/temp"
+    log_debug "Cleaned up temporary files"
+  fi
+
+  # Provide recovery guidance
+  echo "" >&2
+  echo "ERROR RECOVERY:" >&2
+  echo "  The pipeline encountered an error and has rolled back changes." >&2
+  echo "" >&2
+  echo "To diagnose:" >&2
+  echo "  1. Check error log: cat .pipeline/errors.log" >&2
+  echo "  2. Review state: cat .pipeline/state.json" >&2
+  echo "  3. Re-run with debug: pipeline.sh --debug $STAGE $ARGS" >&2
+  echo "" >&2
+  echo "To recover:" >&2
+  echo "  - Fix the issue and re-run the same command" >&2
+  echo "  - Or reset: rm -rf .pipeline && pipeline.sh init" >&2
+  echo "" >&2
 
   exit $exit_code
 }
@@ -589,7 +643,9 @@ EOF
 
     # Update state
     if command -v jq &>/dev/null; then
+      backup_state
       jq '.stage = "gherkin"' .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+      commit_state
     fi
 
     echo "RESULT: Generated features in .pipeline/features/"
@@ -663,7 +719,9 @@ EOF
     # Update state (jq is optional but recommended)
     if command -v jq &>/dev/null; then
       log_debug "Updating state with jq"
+      backup_state
       jq ".stage = \"stories\" | .epicId = \"$EPIC_ID\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+      commit_state
     else
       log_warn "jq not found. State file not updated. Install with: brew install jq"
     fi
@@ -724,7 +782,9 @@ EOF
     # Update state
     if command -v jq &>/dev/null; then
       log_debug "Updating state for work stage"
+      backup_state
       jq ".stage = \"work\" | .currentStory = \"$STORY_ID\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+      commit_state
     fi
 
     # Step 1: Create feature branch
@@ -739,7 +799,9 @@ EOF
 
       # Update state with branch
       if command -v jq &>/dev/null; then
+        backup_state
         jq ".branch = \"$BRANCH_NAME\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+        commit_state
       fi
     else
       log_warn "Not a git repository - skipping branch creation"
