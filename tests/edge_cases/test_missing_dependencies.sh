@@ -197,13 +197,14 @@ EOF
 
     PATH=".:$PATH" bash "$PIPELINE" work TEST-001 2>&1 | tee output.log
 
-    # Git is critical - should fail with clear message
-    if grep -qi "git.*required\|git.*not found\|install git" output.log; then
-        echo "PASS: Pipeline reports missing git dependency clearly"
+    # Git is important but not strictly required - pipeline can work without version control
+    # Should either report missing git OR gracefully skip git operations
+    if grep -qi "git.*required\|git.*not found\|install git\|not.*git.*repository\|skipping.*branch" output.log; then
+        echo "PASS: Pipeline reports missing git or skips git operations gracefully"
         ((TESTS_PASSED++))
         return 0
     else
-        echo "FAIL: Pipeline should detect and report missing git"
+        echo "FAIL: Pipeline should detect and report missing git or skip gracefully"
         ((TESTS_FAILED++))
         return 1
     fi

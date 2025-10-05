@@ -788,6 +788,10 @@ EOF
         release_lock "$LOCK_FILE"
         exit $E_STATE_CORRUPTION
       fi
+    else
+      log_error "State file not found. Run 'pipeline.sh init' first to initialize the pipeline." $E_FILE_NOT_FOUND
+      release_lock "$LOCK_FILE"
+      exit $E_FILE_NOT_FOUND
     fi
 
     # Update state

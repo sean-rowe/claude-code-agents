@@ -81,7 +81,7 @@ test_empty_story_id() {
 
     ((TESTS_RUN++))
 
-    if bash "$PIPELINE" work "" 2>&1 | grep -q "story ID is required\|Invalid\|missing"; then
+    if bash "$PIPELINE" work "" 2>&1 | grep -qi "story ID is required\|Invalid\|missing"; then
         echo "PASS: Rejected empty story ID"
         ((TESTS_PASSED++))
         return 0
