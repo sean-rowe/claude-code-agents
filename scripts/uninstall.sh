@@ -30,6 +30,9 @@ DRY_RUN=false
 VERBOSE=false
 SKIP_BACKUP=false
 
+# Initialize REPLY to avoid unbound variable errors in dry-run mode
+REPLY=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)
@@ -169,6 +172,13 @@ check_disk_space() {
       available_mb=$(df -m "$HOME" | awk 'NR==2 {print $4}')
     fi
 
+    # VALIDATION: Ensure available_mb is numeric
+    if ! [[ "$available_mb" =~ ^[0-9]+$ ]]; then
+      log "WARNING: Could not determine available disk space (got: '$available_mb'), skipping check"
+      echo -e "${YELLOW}⚠${NC} Could not determine disk space, proceeding without validation"
+      return 0
+    fi
+
     if [ "$available_mb" -lt "$required_mb" ]; then
       echo -e "${RED}✗${NC} Insufficient disk space"
       echo "Required: ${required_mb}MB, Available: ${available_mb}MB"
@@ -199,29 +209,74 @@ create_backup() {
   fi
 
   BACKUP_DIR="$HOME/.claude-backup-$(date '+%Y%m%d-%H%M%S')"
-  mkdir -p "$BACKUP_DIR"
-  log "Creating backup at: $BACKUP_DIR"
 
+  # VALIDATION: Ensure backup directory can be created
+  if ! mkdir -p "$BACKUP_DIR" 2>&1 | tee -a "$LOG_FILE"; then
+    echo -e "${RED}✗${NC} Failed to create backup directory: $BACKUP_DIR"
+    log "ERROR: Failed to create backup directory"
+    exit 1
+  fi
+
+  log "Creating backup at: $BACKUP_DIR"
   echo "Creating backup..."
+
+  # Track backup failures
+  local BACKUP_FAILED=false
+  local backup_items=0
+  local failed_items=0
 
   # Backup configuration directory if it exists
   if [ -d "$HOME/.claude" ]; then
-    cp -r "$HOME/.claude" "$BACKUP_DIR/claude-config" 2>/dev/null || true
-    log "Backed up: ~/.claude/ -> $BACKUP_DIR/claude-config"
+    if cp -r "$HOME/.claude" "$BACKUP_DIR/claude-config" 2>&1 | tee -a "$LOG_FILE"; then
+      log "SUCCESS: Backed up ~/.claude/ -> $BACKUP_DIR/claude-config"
+      ((backup_items++))
+    else
+      echo -e "${RED}✗${NC} Failed to backup ~/.claude/"
+      log "ERROR: Failed to backup ~/.claude/"
+      BACKUP_FAILED=true
+      ((failed_items++))
+    fi
   fi
 
   # Backup binary locations
   for bin_location in "/usr/local/bin/claude-pipeline" "$HOME/.local/bin/claude-pipeline" "$HOME/bin/claude-pipeline"; do
     if [ -f "$bin_location" ] || [ -L "$bin_location" ]; then
       local backup_name=$(echo "$bin_location" | tr '/' '_')
-      cp "$bin_location" "$BACKUP_DIR/$backup_name" 2>/dev/null || true
-      log "Backed up: $bin_location -> $BACKUP_DIR/$backup_name"
+      if cp "$bin_location" "$BACKUP_DIR/$backup_name" 2>&1 | tee -a "$LOG_FILE"; then
+        log "SUCCESS: Backed up $bin_location -> $BACKUP_DIR/$backup_name"
+        ((backup_items++))
+      else
+        echo -e "${RED}✗${NC} Failed to backup $bin_location"
+        log "ERROR: Failed to backup $bin_location"
+        BACKUP_FAILED=true
+        ((failed_items++))
+      fi
     fi
   done
 
-  echo -e "${GREEN}✓${NC} Backup created at: $BACKUP_DIR"
+  # VALIDATION: Check if backup succeeded
+  if [ "$BACKUP_FAILED" = true ]; then
+    echo ""
+    echo -e "${RED}✗${NC} Backup creation failed"
+    echo "Failed to backup $failed_items item(s), successfully backed up $backup_items item(s)"
+    echo ""
+    echo "Cannot proceed safely without complete backup."
+    echo "Please fix the errors above and try again."
+    log "ERROR: Backup creation failed ($failed_items failures, $backup_items successes)"
+
+    # Clean up partial backup
+    if [ -d "$BACKUP_DIR" ]; then
+      rm -rf "$BACKUP_DIR"
+      log "Cleaned up partial backup directory"
+    fi
+
+    exit 1
+  fi
+
+  echo -e "${GREEN}✓${NC} Backup created successfully at: $BACKUP_DIR"
+  echo "  Backed up $backup_items item(s)"
   echo ""
-  log "Backup completed successfully"
+  log "Backup completed successfully ($backup_items items backed up)"
 }
 
 # SAFETY FEATURE #3: Rollback capability
@@ -236,12 +291,24 @@ rollback_from_backup() {
   echo -e "${YELLOW}⚠${NC} Uninstall failed. Attempting rollback..."
   log "ROLLBACK: Attempting to restore from backup"
 
+  # Track rollback failures
+  local ROLLBACK_FAILED=false
+  local rollback_items=0
+  local failed_rollbacks=0
+
   # Restore configuration
   if [ -d "$BACKUP_DIR/claude-config" ]; then
     rm -rf "$HOME/.claude" 2>/dev/null || true
-    cp -r "$BACKUP_DIR/claude-config" "$HOME/.claude"
-    echo -e "${GREEN}✓${NC} Restored configuration"
-    log "ROLLBACK: Restored ~/.claude/"
+    if cp -r "$BACKUP_DIR/claude-config" "$HOME/.claude" 2>&1 | tee -a "$LOG_FILE"; then
+      echo -e "${GREEN}✓${NC} Restored configuration"
+      log "ROLLBACK SUCCESS: Restored ~/.claude/"
+      ((rollback_items++))
+    else
+      echo -e "${RED}✗${NC} Failed to restore configuration"
+      log "ROLLBACK ERROR: Failed to restore ~/.claude/"
+      ROLLBACK_FAILED=true
+      ((failed_rollbacks++))
+    fi
   fi
 
   # Restore binaries
@@ -249,15 +316,34 @@ rollback_from_backup() {
     if [ -f "$backed_up_file" ]; then
       local original_path=$(basename "$backed_up_file" | tr '_' '/')
       if [[ "$original_path" == *"bin"*"claude-pipeline" ]]; then
-        cp "$backed_up_file" "/$original_path" 2>/dev/null || true
-        log "ROLLBACK: Restored /$original_path"
+        if cp "$backed_up_file" "/$original_path" 2>&1 | tee -a "$LOG_FILE"; then
+          log "ROLLBACK SUCCESS: Restored /$original_path"
+          ((rollback_items++))
+        else
+          echo -e "${RED}✗${NC} Failed to restore /$original_path"
+          log "ROLLBACK ERROR: Failed to restore /$original_path"
+          ROLLBACK_FAILED=true
+          ((failed_rollbacks++))
+        fi
       fi
     fi
   done
 
-  echo -e "${GREEN}✓${NC} Rollback completed"
-  echo "Backup preserved at: $BACKUP_DIR"
-  log "ROLLBACK: Completed successfully"
+  if [ "$ROLLBACK_FAILED" = true ]; then
+    echo ""
+    echo -e "${RED}✗${NC} Rollback partially failed"
+    echo "Restored $rollback_items item(s), failed to restore $failed_rollbacks item(s)"
+    echo "Backup preserved at: $BACKUP_DIR"
+    echo "You may need to manually restore some files from the backup."
+    log "ROLLBACK: Partially failed ($rollback_items successes, $failed_rollbacks failures)"
+    return 1
+  else
+    echo -e "${GREEN}✓${NC} Rollback completed successfully"
+    echo "Restored $rollback_items item(s)"
+    echo "Backup preserved at: $BACKUP_DIR"
+    log "ROLLBACK: Completed successfully ($rollback_items items restored)"
+    return 0
+  fi
 }
 
 # Detect installation method
