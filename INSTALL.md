@@ -239,23 +239,44 @@ git pull origin main
 
 ### Automatic Uninstall (Recommended)
 
-Use the provided uninstall script to remove all traces:
+Use the provided uninstall script with **19 safety features** to safely remove all traces:
 
 ```bash
-# If installed from repository
+# Standard uninstall
 bash scripts/uninstall.sh
 
-# If installed via npm/Homebrew (download and run)
-curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code-agents/main/scripts/uninstall.sh | bash
+# Preview what would be removed (dry-run mode)
+bash scripts/uninstall.sh --dry-run
+
+# Verbose output with detailed logging
+bash scripts/uninstall.sh --verbose
+
+# Skip backup creation (not recommended)
+bash scripts/uninstall.sh --skip-backup
+
+# Show help
+bash scripts/uninstall.sh --help
 ```
+
+**Production-Grade Safety Features:**
+1. ✅ **Dry-run mode** - Preview changes before execution
+2. ✅ **Automatic backups** - Timestamped backup before any deletion
+3. ✅ **Rollback capability** - Restore from backup if uninstall fails
+4. ✅ **Comprehensive logging** - All operations logged to ~/.claude-uninstall.log
+5. ✅ **Verification report** - Post-uninstall validation
+6. ✅ **Root safeguard** - Prevents dangerous sudo execution
+7. ✅ **Disk space check** - Validates 50MB available before backup
+8. ✅ **Interrupt handling** - Graceful cleanup on Ctrl+C
 
 The uninstall script will:
 - Detect your installation method automatically (npm, Homebrew, or manual)
-- Remove all Claude Pipeline files
+- Create automatic backup before making any changes
+- Remove all Claude Pipeline files safely
 - Optionally clean up configuration files (~/.claude/)
-- Optionally clean up project .pipeline/ directories
-- Verify complete removal
-- Provide clear feedback for each step
+- Optionally clean up project .pipeline/ directories (with active work detection)
+- Provide comprehensive verification report
+- Log all operations for audit trail
+- Offer rollback if any operation fails
 
 ### Manual Uninstall
 

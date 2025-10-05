@@ -1,18 +1,147 @@
 #!/usr/bin/env bash
 # Uninstall script for Claude Pipeline
 # Safely removes all Claude Pipeline files and configuration
+#
+# SAFETY FEATURES (19 total):
+# 1. Dry-run mode (--dry-run flag)
+# 2. Automatic backup creation
+# 3. Rollback capability on failure
+# 4. Comprehensive operation logging
+# 5. Post-uninstall verification report
+# 6. Root user safeguard
+# 7. Disk space validation
+# 8. Interrupt handling (SIGINT/SIGTERM)
+# 9. Explicit confirmation prompts
+# 10. Shows exactly what will be removed
+# 11. Optional configuration preservation
+# 12. Safe directory search (no home-wide recursion)
+# 13. Clear feedback at each step
+# 14. Operation success validation
+# 15. Active work detection
+# 16. Incomplete work warnings
+# 17. Terminal injection prevention
+# 18. JSON validation before parsing
+# 19. Conservative error handling
 
 set -euo pipefail
 
+# Parse command-line arguments
+DRY_RUN=false
+VERBOSE=false
+SKIP_BACKUP=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    --skip-backup)
+      SKIP_BACKUP=true
+      shift
+      ;;
+    --help)
+      echo "Usage: $0 [OPTIONS]"
+      echo ""
+      echo "OPTIONS:"
+      echo "  --dry-run       Preview what would be removed without making changes"
+      echo "  --verbose       Show detailed output"
+      echo "  --skip-backup   Skip creating backup (not recommended)"
+      echo "  --help          Show this help message"
+      echo ""
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# SAFETY CHECK #6: Prevent running as root (dangerous)
+if [ "$EUID" -eq 0 ] || [ "$(id -u)" -eq 0 ]; then
+  echo "ERROR: This script should not be run as root or with sudo."
+  echo ""
+  echo "Running uninstall as root can cause system-wide file removal."
+  echo "Please run as your regular user account:"
+  echo "  bash scripts/uninstall.sh"
+  echo ""
+  exit 1
+fi
+
+# Set up logging (SAFETY FEATURE #4)
+LOG_FILE="$HOME/.claude-uninstall.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Initialize log file
+{
+  echo "========================================"
+  echo "Claude Pipeline Uninstall Log"
+  echo "Started: $TIMESTAMP"
+  echo "User: $(whoami)"
+  echo "Hostname: $(hostname)"
+  echo "Dry-run: $DRY_RUN"
+  echo "========================================"
+  echo ""
+} > "$LOG_FILE"
+
+# Logging function
+log() {
+  local message="$1"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
+  if [ "$VERBOSE" = true ]; then
+    echo "$message"
+  fi
+}
+
+# SAFETY FEATURE #8: Interrupt handling
+INTERRUPTED=false
+BACKUP_DIR=""
+
+cleanup_on_interrupt() {
+  INTERRUPTED=true
+  echo ""
+  echo -e "${YELLOW}⚠ Uninstall interrupted by user${NC}"
+  log "INTERRUPTED: User interrupted uninstall process"
+
+  if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
+    echo ""
+    echo "Backup preserved at: $BACKUP_DIR"
+    echo "You can manually restore if needed"
+    log "Backup preserved at: $BACKUP_DIR"
+  fi
+
+  echo ""
+  echo "Partial uninstall may have occurred. Check log: $LOG_FILE"
+  log "Uninstall terminated with interruption"
+  exit 130  # Standard exit code for SIGINT
+}
+
+trap cleanup_on_interrupt SIGINT SIGTERM
+
 echo "========================================"
 echo "Claude Pipeline - Uninstaller"
+if [ "$DRY_RUN" = true ]; then
+  echo "(DRY RUN MODE - No changes will be made)"
+fi
 echo "========================================"
 echo ""
+echo "Log file: $LOG_FILE"
+echo ""
+
+log "Uninstall script started"
+log "Dry-run mode: $DRY_RUN"
 
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Detection flags
@@ -20,8 +149,120 @@ FOUND_NPM=false
 FOUND_HOMEBREW=false
 FOUND_MANUAL=false
 
+# SAFETY FEATURE #7: Check available disk space
+check_disk_space() {
+  local required_mb=50  # Require at least 50MB for backup operations
+
+  if [ "$SKIP_BACKUP" = true ]; then
+    log "Skipping disk space check (backup disabled)"
+    return 0
+  fi
+
+  # Get available space in MB (works on macOS and Linux)
+  if command -v df &>/dev/null; then
+    local available_mb
+    if df -Pm "$HOME" >/dev/null 2>&1; then
+      # Use POSIX mode for consistent output
+      available_mb=$(df -Pm "$HOME" | awk 'NR==2 {print $4}')
+    else
+      # Fallback for systems without -P flag
+      available_mb=$(df -m "$HOME" | awk 'NR==2 {print $4}')
+    fi
+
+    if [ "$available_mb" -lt "$required_mb" ]; then
+      echo -e "${RED}✗${NC} Insufficient disk space"
+      echo "Required: ${required_mb}MB, Available: ${available_mb}MB"
+      echo ""
+      echo "Free up space or use --skip-backup (not recommended)"
+      log "ERROR: Insufficient disk space ($available_mb MB available, need $required_mb MB)"
+      exit 1
+    fi
+
+    log "Disk space check passed ($available_mb MB available)"
+  else
+    log "WARNING: df command not available, skipping disk space check"
+  fi
+}
+
+# SAFETY FEATURE #2: Create backup
+create_backup() {
+  if [ "$SKIP_BACKUP" = true ]; then
+    echo -e "${YELLOW}⚠${NC} Skipping backup (--skip-backup flag set)"
+    log "Backup skipped by user request"
+    return 0
+  fi
+
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${BLUE}ℹ${NC} Would create backup at: $HOME/.claude-backup-$TIMESTAMP"
+    log "DRY RUN: Would create backup"
+    return 0
+  fi
+
+  BACKUP_DIR="$HOME/.claude-backup-$(date '+%Y%m%d-%H%M%S')"
+  mkdir -p "$BACKUP_DIR"
+  log "Creating backup at: $BACKUP_DIR"
+
+  echo "Creating backup..."
+
+  # Backup configuration directory if it exists
+  if [ -d "$HOME/.claude" ]; then
+    cp -r "$HOME/.claude" "$BACKUP_DIR/claude-config" 2>/dev/null || true
+    log "Backed up: ~/.claude/ -> $BACKUP_DIR/claude-config"
+  fi
+
+  # Backup binary locations
+  for bin_location in "/usr/local/bin/claude-pipeline" "$HOME/.local/bin/claude-pipeline" "$HOME/bin/claude-pipeline"; do
+    if [ -f "$bin_location" ] || [ -L "$bin_location" ]; then
+      local backup_name=$(echo "$bin_location" | tr '/' '_')
+      cp "$bin_location" "$BACKUP_DIR/$backup_name" 2>/dev/null || true
+      log "Backed up: $bin_location -> $BACKUP_DIR/$backup_name"
+    fi
+  done
+
+  echo -e "${GREEN}✓${NC} Backup created at: $BACKUP_DIR"
+  echo ""
+  log "Backup completed successfully"
+}
+
+# SAFETY FEATURE #3: Rollback capability
+rollback_from_backup() {
+  if [ -z "$BACKUP_DIR" ] || [ ! -d "$BACKUP_DIR" ]; then
+    echo -e "${RED}✗${NC} No backup available for rollback"
+    log "ERROR: Rollback requested but no backup available"
+    return 1
+  fi
+
+  echo ""
+  echo -e "${YELLOW}⚠${NC} Uninstall failed. Attempting rollback..."
+  log "ROLLBACK: Attempting to restore from backup"
+
+  # Restore configuration
+  if [ -d "$BACKUP_DIR/claude-config" ]; then
+    rm -rf "$HOME/.claude" 2>/dev/null || true
+    cp -r "$BACKUP_DIR/claude-config" "$HOME/.claude"
+    echo -e "${GREEN}✓${NC} Restored configuration"
+    log "ROLLBACK: Restored ~/.claude/"
+  fi
+
+  # Restore binaries
+  for backed_up_file in "$BACKUP_DIR"/*; do
+    if [ -f "$backed_up_file" ]; then
+      local original_path=$(basename "$backed_up_file" | tr '_' '/')
+      if [[ "$original_path" == *"bin"*"claude-pipeline" ]]; then
+        cp "$backed_up_file" "/$original_path" 2>/dev/null || true
+        log "ROLLBACK: Restored /$original_path"
+      fi
+    fi
+  done
+
+  echo -e "${GREEN}✓${NC} Rollback completed"
+  echo "Backup preserved at: $BACKUP_DIR"
+  log "ROLLBACK: Completed successfully"
+}
+
 # Detect installation method
 echo "Detecting installation method..."
+log "Starting installation detection"
 echo ""
 
 # Check for npm global installation
@@ -85,59 +326,116 @@ echo "  • Project-specific .pipeline/ directories"
 echo ""
 
 # Confirm uninstall
-read -p "Proceed with uninstall? (y/N) " -n 1 -r
-echo ""
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-  echo "Uninstall cancelled."
-  exit 0
+if [ "$DRY_RUN" = false ]; then
+  read -p "Proceed with uninstall? (y/N) " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Uninstall cancelled."
+    log "User cancelled uninstall"
+    exit 0
+  fi
+else
+  echo -e "${BLUE}ℹ${NC} DRY RUN: Would ask for confirmation here"
+  log "DRY RUN: Skipping confirmation prompt"
 fi
 
 echo ""
+
+# SAFETY CHECKS before proceeding
+check_disk_space
+create_backup
+
 echo "Uninstalling Claude Pipeline..."
+log "Starting uninstall operations"
 echo ""
+
+# Track failures for rollback
+UNINSTALL_FAILED=false
 
 # Uninstall npm global package
 if [ "$FOUND_NPM" = true ]; then
-  echo "Removing npm global package..."
-  if npm uninstall -g @claude/pipeline; then
-    echo -e "${GREEN}✓${NC} npm package removed"
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${BLUE}ℹ${NC} Would remove npm global package: @claude/pipeline"
+    log "DRY RUN: Would remove npm package"
   else
-    echo -e "${RED}✗${NC} Failed to remove npm package"
+    echo "Removing npm global package..."
+    log "Removing npm package: @claude/pipeline"
+    if npm uninstall -g @claude/pipeline 2>&1 | tee -a "$LOG_FILE"; then
+      echo -e "${GREEN}✓${NC} npm package removed"
+      log "SUCCESS: npm package removed"
+    else
+      echo -e "${RED}✗${NC} Failed to remove npm package"
+      log "ERROR: Failed to remove npm package"
+      UNINSTALL_FAILED=true
+    fi
   fi
   echo ""
 fi
 
 # Uninstall Homebrew package
 if [ "$FOUND_HOMEBREW" = true ]; then
-  echo "Removing Homebrew package..."
-  if brew uninstall claude-pipeline; then
-    echo -e "${GREEN}✓${NC} Homebrew package removed"
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${BLUE}ℹ${NC} Would remove Homebrew package: claude-pipeline"
+    log "DRY RUN: Would remove Homebrew package"
   else
-    echo -e "${RED}✗${NC} Failed to remove Homebrew package"
+    echo "Removing Homebrew package..."
+    log "Removing Homebrew package: claude-pipeline"
+    if brew uninstall claude-pipeline 2>&1 | tee -a "$LOG_FILE"; then
+      echo -e "${GREEN}✓${NC} Homebrew package removed"
+      log "SUCCESS: Homebrew package removed"
+    else
+      echo -e "${RED}✗${NC} Failed to remove Homebrew package"
+      log "ERROR: Failed to remove Homebrew package"
+      UNINSTALL_FAILED=true
+    fi
   fi
   echo ""
 fi
 
 # Remove manual installation
 if [ "$FOUND_MANUAL" = true ]; then
-  echo "Removing manual installation..."
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${BLUE}ℹ${NC} Would remove manual installation files"
+    log "DRY RUN: Would remove manual installation"
+  else
+    echo "Removing manual installation..."
+    log "Removing manual installation files"
 
-  # Remove from /usr/local/bin
-  if [ -x "/usr/local/bin/claude-pipeline" ]; then
-    sudo rm -f "/usr/local/bin/claude-pipeline" && \
-      echo -e "${GREEN}✓${NC} Removed /usr/local/bin/claude-pipeline"
-  fi
+    # Remove from /usr/local/bin
+    if [ -x "/usr/local/bin/claude-pipeline" ]; then
+      if sudo rm -f "/usr/local/bin/claude-pipeline" 2>&1 | tee -a "$LOG_FILE"; then
+        echo -e "${GREEN}✓${NC} Removed /usr/local/bin/claude-pipeline"
+        log "SUCCESS: Removed /usr/local/bin/claude-pipeline"
+      else
+        echo -e "${RED}✗${NC} Failed to remove /usr/local/bin/claude-pipeline"
+        log "ERROR: Failed to remove /usr/local/bin/claude-pipeline"
+        UNINSTALL_FAILED=true
+      fi
+    fi
 
-  # Remove from ~/.local/bin
-  if [ -x "$HOME/.local/bin/claude-pipeline" ]; then
-    rm -f "$HOME/.local/bin/claude-pipeline" && \
-      echo -e "${GREEN}✓${NC} Removed ~/.local/bin/claude-pipeline"
-  fi
+    # Remove from ~/.local/bin
+    if [ -x "$HOME/.local/bin/claude-pipeline" ]; then
+      if rm -f "$HOME/.local/bin/claude-pipeline" 2>&1 | tee -a "$LOG_FILE"; then
+        echo -e "${GREEN}✓${NC} Removed ~/.local/bin/claude-pipeline"
+        log "SUCCESS: Removed ~/.local/bin/claude-pipeline"
+      else
+        echo -e "${RED}✗${NC} Failed to remove ~/.local/bin/claude-pipeline"
+        log "ERROR: Failed to remove ~/.local/bin/claude-pipeline"
+        UNINSTALL_FAILED=true
+      fi
+    fi
 
-  # Remove from ~/bin
-  if [ -x "$HOME/bin/claude-pipeline" ]; then
-    rm -f "$HOME/bin/claude-pipeline" && \
-      echo -e "${GREEN}✓${NC} Removed ~/bin/claude-pipeline"
+    # Remove from ~/bin
+    if [ -x "$HOME/bin/claude-pipeline" ]; then
+      if rm -f "$HOME/bin/claude-pipeline" 2>&1 | tee -a "$LOG_FILE"; then
+        echo -e "${GREEN}✓${NC} Removed ~/bin/claude-pipeline"
+        log "SUCCESS: Removed ~/bin/claude-pipeline"
+      else
+        echo -e "${RED}✗${NC} Failed to remove ~/bin/claude-pipeline"
+        log "ERROR: Failed to remove ~/bin/claude-pipeline"
+        UNINSTALL_FAILED=true
+      fi
+    fi
   fi
 
   echo ""
@@ -153,16 +451,26 @@ if [ -d "$HOME/.claude" ]; then
   echo "  • Pipeline preferences"
   echo "  • Custom templates"
   echo ""
-  read -p "Remove configuration directory? (y/N) " -n 1 -r
-  echo ""
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if rm -rf "$HOME/.claude"; then
-      echo -e "${GREEN}✓${NC} Removed ~/.claude directory"
-    else
-      echo -e "${RED}✗${NC} Failed to remove ~/.claude directory"
-    fi
+
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${BLUE}ℹ${NC} Would ask: Remove configuration directory? (dry-run mode)"
+    log "DRY RUN: Would ask about removing ~/.claude"
   else
-    echo "Kept ~/.claude directory"
+    read -p "Remove configuration directory? (y/N) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      log "Removing ~/.claude directory"
+      if rm -rf "$HOME/.claude" 2>&1 | tee -a "$LOG_FILE"; then
+        echo -e "${GREEN}✓${NC} Removed ~/.claude directory"
+        log "SUCCESS: Removed ~/.claude directory"
+      else
+        echo -e "${RED}✗${NC} Failed to remove ~/.claude directory"
+        log "ERROR: Failed to remove ~/.claude directory"
+      fi
+    else
+      echo "Kept ~/.claude directory"
+      log "User chose to keep ~/.claude directory"
+    fi
   fi
   echo ""
 fi
@@ -180,10 +488,17 @@ echo ""
 echo "Note: .pipeline directories are typically added to .gitignore and not checked in."
 echo "Removing them will not affect your code - only the pipeline workflow state."
 echo ""
-read -p "Search for .pipeline directories in current directory? (y/N) " -n 1 -r
-echo ""
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${BLUE}ℹ${NC} Would ask: Search for .pipeline directories? (dry-run mode)"
+  log "DRY RUN: Would search for .pipeline directories"
+else
+  read -p "Search for .pipeline directories in current directory? (y/N) " -n 1 -r
+  echo ""
+fi
+
+if [[ $REPLY =~ ^[Yy]$ ]] || [ "$DRY_RUN" = true ]; then
   echo "Searching for .pipeline directories in current directory..."
+  log "Searching for .pipeline directories"
   PIPELINE_DIRS=$(find . -maxdepth 2 -type d -name ".pipeline" 2>/dev/null || true)
 
   if [ -z "$PIPELINE_DIRS" ]; then
@@ -237,41 +552,127 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       echo ""
     fi
 
-    read -p "Remove these directories? (y/N) " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      echo "$PIPELINE_DIRS" | while read -r dir; do
-        # SECURITY: Sanitize directory name for display (same as above)
-        SAFE_DIR=$(printf '%s' "$dir" | tr -d '\000-\037\177')
-
-        if rm -rf "$dir"; then
-          echo -e "${GREEN}✓${NC} Removed $SAFE_DIR"
-        else
-          echo -e "${RED}✗${NC} Failed to remove $SAFE_DIR"
-        fi
-      done
+    if [ "$DRY_RUN" = true ]; then
+      echo -e "${BLUE}ℹ${NC} Would ask: Remove these directories? (dry-run mode)"
+      log "DRY RUN: Would ask about removing .pipeline directories"
     else
-      echo "Kept .pipeline directories"
+      read -p "Remove these directories? (y/N) " -n 1 -r
+      echo ""
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        log "Removing .pipeline directories"
+        echo "$PIPELINE_DIRS" | while read -r dir; do
+          # SECURITY: Sanitize directory name for display (same as above)
+          SAFE_DIR=$(printf '%s' "$dir" | tr -d '\000-\037\177')
+
+          if rm -rf "$dir" 2>&1 | tee -a "$LOG_FILE"; then
+            echo -e "${GREEN}✓${NC} Removed $SAFE_DIR"
+            log "SUCCESS: Removed $SAFE_DIR"
+          else
+            echo -e "${RED}✗${NC} Failed to remove $SAFE_DIR"
+            log "ERROR: Failed to remove $SAFE_DIR"
+          fi
+        done
+      else
+        echo "Kept .pipeline directories"
+        log "User chose to keep .pipeline directories"
+      fi
     fi
   fi
 else
   echo "Skipped .pipeline directory cleanup (remove manually with: rm -rf .pipeline)"
 fi
 
-echo ""
-echo "========================================"
-echo -e "${GREEN}Claude Pipeline Uninstall Complete${NC}"
-echo "========================================"
-echo ""
-echo "Verification:"
+# SAFETY FEATURE #3: Handle failures with rollback
+if [ "$UNINSTALL_FAILED" = true ] && [ "$DRY_RUN" = false ]; then
+  echo ""
+  echo -e "${RED}✗${NC} Uninstall encountered errors"
+  log "ERROR: Uninstall failed, initiating rollback"
 
-# Verify removal
+  read -p "Attempt rollback to restore previous state? (y/N) " -n 1 -r
+  echo ""
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    rollback_from_backup
+  else
+    echo "Rollback skipped. Backup preserved at: $BACKUP_DIR"
+    log "User declined rollback, backup preserved"
+  fi
+
+  echo ""
+  echo "Check log for details: $LOG_FILE"
+  log "Uninstall completed with errors"
+  exit 1
+fi
+
+echo ""
+echo "========================================"
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${BLUE}DRY RUN COMPLETE - No Changes Made${NC}"
+else
+  echo -e "${GREEN}Claude Pipeline Uninstall Complete${NC}"
+fi
+echo "========================================"
+echo ""
+
+# SAFETY FEATURE #5: Post-uninstall verification report
+echo "Verification Report:"
+echo ""
+
+# Verify command removal
 if command -v claude-pipeline &>/dev/null; then
-  echo -e "${RED}✗${NC} claude-pipeline command still available (may be in PATH cache)"
+  echo -e "${YELLOW}⚠${NC} claude-pipeline command still available (may be in PATH cache)"
   echo "   Run: hash -r  # to clear command hash"
+  log "VERIFICATION: Command still in PATH cache"
 else
   echo -e "${GREEN}✓${NC} claude-pipeline command removed"
+  log "VERIFICATION: Command successfully removed"
 fi
+
+# Verify binary locations
+BINARIES_FOUND=false
+for bin_location in "/usr/local/bin/claude-pipeline" "$HOME/.local/bin/claude-pipeline" "$HOME/bin/claude-pipeline"; do
+  if [ -e "$bin_location" ]; then
+    echo -e "${YELLOW}⚠${NC} Binary still exists: $bin_location"
+    BINARIES_FOUND=true
+    log "VERIFICATION: Binary still exists at $bin_location"
+  fi
+done
+
+if [ "$BINARIES_FOUND" = false ]; then
+  echo -e "${GREEN}✓${NC} All binary files removed"
+  log "VERIFICATION: All binaries removed"
+fi
+
+# Check npm
+if command -v npm &>/dev/null; then
+  if npm list -g @claude/pipeline &>/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠${NC} npm package still installed"
+    log "VERIFICATION: npm package still present"
+  else
+    echo -e "${GREEN}✓${NC} npm package removed"
+    log "VERIFICATION: npm package successfully removed"
+  fi
+fi
+
+# Check Homebrew
+if command -v brew &>/dev/null; then
+  if brew list claude-pipeline &>/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠${NC} Homebrew package still installed"
+    log "VERIFICATION: Homebrew package still present"
+  else
+    echo -e "${GREEN}✓${NC} Homebrew package removed"
+    log "VERIFICATION: Homebrew package successfully removed"
+  fi
+fi
+
+echo ""
+if [ "$DRY_RUN" = false ] && [ -n "$BACKUP_DIR" ]; then
+  echo "Backup location: $BACKUP_DIR"
+  echo "(You can safely delete this after verifying uninstall)"
+  log "Backup location: $BACKUP_DIR"
+fi
+
+echo "Log file: $LOG_FILE"
+log "Uninstall completed successfully"
 
 echo ""
 echo "Thank you for using Claude Pipeline!"
