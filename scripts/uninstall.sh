@@ -195,17 +195,38 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Check for active work
     HAS_ACTIVE_WORK=false
     while read -r dir; do
+      # SECURITY: Sanitize directory name for display to prevent terminal injection
+      # Remove all control characters (0x00-0x1F, 0x7F) that could contain escape sequences
+      # Keep original $dir for filesystem operations (rm, test, etc.)
+      SAFE_DIR=$(printf '%s' "$dir" | tr -d '\000-\037\177')
+
       if [ -f "$dir/state.json" ]; then
         # Extract stage from state.json to detect active work
-        STAGE=$(jq -r '.stage // "unknown"' "$dir/state.json" 2>/dev/null || echo "unknown")
+        # Use jq for safe JSON parsing (prevents injection attacks)
+        if command -v jq &>/dev/null; then
+          # Check if state.json is valid JSON before parsing
+          if jq -e . "$dir/state.json" >/dev/null 2>&1; then
+            STAGE=$(jq -r '.stage // "unknown"' "$dir/state.json" 2>/dev/null)
+          else
+            # Corrupted JSON - treat as active work to be conservative
+            echo -e "  ${RED}⚠${NC}  $SAFE_DIR (corrupted state.json - cannot verify stage)"
+            HAS_ACTIVE_WORK=true
+            continue
+          fi
+        else
+          # jq not available - cannot verify (shouldn't happen as jq is checked earlier)
+          echo -e "  ${YELLOW}⚠${NC}  $SAFE_DIR (cannot verify - jq not available)"
+          continue
+        fi
+
         if [ "$STAGE" != "complete" ] && [ "$STAGE" != "unknown" ]; then
-          echo -e "  ${YELLOW}⚠${NC}  $dir (active work detected: stage=$STAGE)"
+          echo -e "  ${YELLOW}⚠${NC}  $SAFE_DIR (active work detected: stage=$STAGE)"
           HAS_ACTIVE_WORK=true
         else
-          echo "  • $dir"
+          echo "  • $SAFE_DIR"
         fi
       else
-        echo "  • $dir"
+        echo "  • $SAFE_DIR"
       fi
     done <<< "$PIPELINE_DIRS"
 
@@ -220,10 +241,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       echo "$PIPELINE_DIRS" | while read -r dir; do
+        # SECURITY: Sanitize directory name for display (same as above)
+        SAFE_DIR=$(printf '%s' "$dir" | tr -d '\000-\037\177')
+
         if rm -rf "$dir"; then
-          echo -e "${GREEN}✓${NC} Removed $dir"
+          echo -e "${GREEN}✓${NC} Removed $SAFE_DIR"
         else
-          echo -e "${RED}✗${NC} Failed to remove $dir"
+          echo -e "${RED}✗${NC} Failed to remove $SAFE_DIR"
         fi
       done
     else
