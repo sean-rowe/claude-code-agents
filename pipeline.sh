@@ -77,6 +77,7 @@ VERBOSE=${VERBOSE:-0}
 DEBUG=${DEBUG:-0}
 DRY_RUN=${DRY_RUN:-0}
 LOG_FILE=".pipeline/errors.log"
+LOCK_FILE=".pipeline/pipeline.lock"
 MAX_RETRIES=${MAX_RETRIES:-3}
 RETRY_DELAY=${RETRY_DELAY:-2}
 OPERATION_TIMEOUT=${OPERATION_TIMEOUT:-300}
@@ -116,6 +117,9 @@ log_debug() {
 }
 
 # Retry logic for network operations
+# SECURITY: Only use retry_command with trusted, hard-coded commands.
+# Never pass unsanitized user input directly to this function as it uses eval.
+# All user inputs (like story IDs) must go through validation functions first.
 retry_command() {
   local max_attempts="$1"
   shift
@@ -132,6 +136,7 @@ retry_command() {
       return $E_SUCCESS
     fi
 
+    # eval is used here for command string execution (safe - only called with hard-coded commands)
     if eval "$cmd"; then
       log_debug "Command succeeded on attempt $attempt"
       return $E_SUCCESS
@@ -160,6 +165,12 @@ with_timeout() {
   if [ "$DRY_RUN" -eq 1 ]; then
     log_info "[DRY-RUN] Would execute with timeout: $cmd"
     return $E_SUCCESS
+  fi
+
+  # Check if timeout command is available
+  if ! command -v timeout &>/dev/null; then
+    log_error "timeout command not found. Install with: brew install coreutils (macOS) or apt-get install coreutils (Linux)" $E_MISSING_DEPENDENCY
+    return $E_MISSING_DEPENDENCY
   fi
 
   timeout "$timeout" bash -c "$cmd"
@@ -337,7 +348,7 @@ validate_json_schema() {
 
 # File locking for concurrent access protection
 acquire_lock() {
-  local lock_file="${1:-.pipeline/pipeline.lock}"
+  local lock_file="${1:-$LOCK_FILE}"
   local timeout="${2:-30}"
   local waited=0
 
@@ -346,7 +357,7 @@ acquire_lock() {
 
   # Wait for lock with timeout
   while [ $waited -lt $timeout ]; do
-    # Try to create lock file atomically
+    # Try to create lock directory atomically (mkdir is atomic, prevents TOCTOU)
     if mkdir "$lock_file" 2>/dev/null; then
       # Store PID in lock for debugging
       echo $$ > "$lock_file/pid"
@@ -365,7 +376,7 @@ acquire_lock() {
       fi
     fi
 
-    log_debug "Waiting for lock (${waited}s/$timeout}s)..."
+    log_debug "Waiting for lock (${waited}s/${timeout}s)..."
     sleep 1
     ((waited++))
   done
@@ -376,7 +387,7 @@ acquire_lock() {
 
 # Release file lock
 release_lock() {
-  local lock_file="${1:-.pipeline/pipeline.lock}"
+  local lock_file="${1:-$LOCK_FILE}"
 
   if [ -d "$lock_file" ]; then
     rm -rf "$lock_file"
@@ -417,10 +428,10 @@ error_handler() {
   # Perform rollback operations
   log_info "Performing cleanup and rollback..."
 
-  # Remove lock file if present
-  if [ -f ".pipeline/.lock" ]; then
-    rm -f ".pipeline/.lock"
-    log_debug "Removed stale lock file"
+  # Remove lock directory if present (lock is a directory, not a file)
+  if [ -d "$LOCK_FILE" ]; then
+    rm -rf "$LOCK_FILE"
+    log_debug "Removed stale lock directory"
   fi
 
   # Restore state backup if it exists
@@ -746,13 +757,13 @@ EOF
     fi
 
     # Acquire lock to prevent concurrent modifications
-    if ! acquire_lock ".pipeline/pipeline.lock" 30; then
+    if ! acquire_lock "$LOCK_FILE" 30; then
       log_error "Another pipeline process is running. Please wait or remove stale lock." $E_TIMEOUT
       exit $E_TIMEOUT
     fi
 
     # Ensure lock is released on exit
-    trap 'release_lock ".pipeline/pipeline.lock"' EXIT INT TERM
+    trap 'release_lock "$LOCK_FILE"' EXIT INT TERM
 
     echo "STAGE: work"
     echo "STEP: 1 of 6"
@@ -765,7 +776,7 @@ EOF
       log_info "[DRY-RUN] Would generate tests and implementation"
       echo "RESULT: [DRY-RUN] Would generate code for $STORY_ID"
       echo "NEXT: Run './pipeline.sh complete $STORY_ID'"
-      release_lock ".pipeline/pipeline.lock"
+      release_lock "$LOCK_FILE"
     else
 
     log_debug "Working on story: $STORY_ID"
@@ -774,7 +785,7 @@ EOF
     if [ -f ".pipeline/state.json" ]; then
       if ! validate_json_schema ".pipeline/state.json" "stories"; then
         log_error "State file is corrupted. Run 'pipeline.sh init' to reinitialize." $E_STATE_CORRUPTION
-        release_lock ".pipeline/pipeline.lock"
+        release_lock "$LOCK_FILE"
         exit $E_STATE_CORRUPTION
       fi
     fi
