@@ -1,0 +1,2 @@
+tests/validation/validate_generated_code.sh: line 27: declare: -A: invalid option
+declare: usage: declare [-afFirtx] [-p] [name[=value] ...]
