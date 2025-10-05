@@ -731,8 +731,9 @@ EOF
     if command -v jq &>/dev/null; then
       log_debug "Updating state with jq"
       backup_state
-      jq ".stage = \"stories\" | .epicId = \"$EPIC_ID\"" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
+      jq ".stage = \"stories\" | .epicId = \"$EPIC_ID\" | .stories = {}" .pipeline/state.json > .pipeline/tmp.json && mv .pipeline/tmp.json .pipeline/state.json
       commit_state
+      log_debug "State updated: stage=stories, epicId=$EPIC_ID, stories={}"
     else
       log_warn "jq not found. State file not updated. Install with: brew install jq"
     fi
