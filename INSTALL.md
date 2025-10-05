@@ -237,23 +237,47 @@ git pull origin main
 
 ## Uninstallation
 
-### npm
+### Automatic Uninstall (Recommended)
+
+Use the provided uninstall script to remove all traces:
+
+```bash
+# If installed from repository
+./uninstall.sh
+
+# If installed via npm/Homebrew
+curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code-agents/main/uninstall.sh | bash
+```
+
+The uninstall script will:
+- Detect your installation method automatically
+- Remove all Claude Pipeline files
+- Optionally clean up configuration and data
+- Verify complete removal
+
+### Manual Uninstall
+
+#### npm
 ```bash
 npm uninstall -g @claude/pipeline
 ```
 
-### Homebrew
+#### Homebrew
 ```bash
 brew uninstall claude-pipeline
 ```
 
-### Manual
+#### Manual Installation
 ```bash
 # Remove symlink
 sudo rm /usr/local/bin/claude-pipeline
 
 # Remove repository
 rm -rf /path/to/claude-code-agents
+
+# Optional: Remove user data
+rm -rf .pipeline
+rm -f ~/.claude-pipeline.conf
 ```
 
 ---

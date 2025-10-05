@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Claude Pipeline - npm wrapper script
+# Resolves installation path and executes main pipeline
+
+set -euo pipefail
 
 # Resolve the real path of this script (follow symlinks)
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -11,5 +14,23 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Validate main script exists before executing
+PIPELINE_SCRIPT="$PROJECT_ROOT/pipeline.sh"
+if [ ! -f "$PIPELINE_SCRIPT" ]; then
+  echo "ERROR: pipeline.sh not found at $PIPELINE_SCRIPT" >&2
+  echo "Claude Pipeline installation may be corrupted." >&2
+  echo "" >&2
+  echo "Try reinstalling:" >&2
+  echo "  npm: npm install -g @claude/pipeline" >&2
+  echo "  brew: brew reinstall claude-pipeline" >&2
+  exit 1
+fi
+
+# Validate script is readable and executable
+if [ ! -r "$PIPELINE_SCRIPT" ]; then
+  echo "ERROR: Cannot read pipeline.sh (permission denied)" >&2
+  exit 1
+fi
+
 # Execute the main pipeline script
-exec bash "$PROJECT_ROOT/pipeline.sh" "$@"
+exec bash "$PIPELINE_SCRIPT" "$@"

@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Installation script for Claude Pipeline
+# Post-install validation and setup for npm/Homebrew installations
 
-set -e
+set -euo pipefail
 
 echo "========================================"
 echo "Claude Pipeline - Installation"
