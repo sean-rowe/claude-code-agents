@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/anthropics/claude-code-agents/pipeline-state-schema.json",
+  "title": "Claude Pipeline State Schema",
+  "description": "Schema for validating .pipeline/state.json files",
+  "type": "object",
+  "required": [
+    "stage",
+    "projectKey",
+    "epicId",
+    "featureStories",
+    "ruleStories",
+    "tasks",
+    "currentStory",
+    "branch",
+    "pr",
+    "step",
+    "totalSteps",
+    "lastAction",
+    "nextAction",
+    "startTime"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": ["ready", "requirements", "gherkin", "stories", "work", "review", "complete"],
+      "description": "Current pipeline stage"
+    },
+    "projectKey": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,10}$",
+      "description": "JIRA project key (2-10 uppercase letters)"
+    },
+    "epicId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Z]+-[0-9]+$" },
+        { "type": "null" }
+      ],
+      "description": "JIRA epic ID (e.g., PROJ-123) or null"
+    },
+    "featureStories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]+$"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 255},
+          "status": {"type": "string", "enum": ["pending", "in_progress", "complete"]}
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of feature story objects"
+    },
+    "ruleStories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]+$"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 255},
+          "status": {"type": "string", "enum": ["pending", "in_progress", "complete"]}
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of rule story objects"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]+$"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 255},
+          "status": {"type": "string", "enum": ["pending", "in_progress", "complete"]}
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of task objects"
+    },
+    "currentStory": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Z]+-[0-9]+$" },
+        { "type": "null" }
+      ],
+      "description": "Currently active story ID or null"
+    },
+    "branch": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[a-zA-Z0-9/_-]+$" },
+        { "type": "null" }
+      ],
+      "description": "Current git branch name or null"
+    },
+    "pr": {
+      "oneOf": [
+        { "type": "string", "pattern": "^https://github.com/.+/pull/[0-9]+$" },
+        { "type": "null" }
+      ],
+      "description": "Pull request URL or null"
+    },
+    "step": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current step number in pipeline"
+    },
+    "totalSteps": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of steps in pipeline"
+    },
+    "lastAction": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Description of last action taken"
+    },
+    "nextAction": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Description of next recommended action"
+    },
+    "startTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of pipeline initialization"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Pipeline version that created this state (optional, added in v1.0.0+)"
+    }
+  },
+  "additionalProperties": false
+}
