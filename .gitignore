@@ -2,3 +2,50 @@ projects/
 todos/
 statsig/
 .pipeline/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Pipeline configuration (may contain sensitive data)
+.pipelinerc
+!.pipelinerc.example
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Node modules (if using npm)
+node_modules/
+
+# Python cache (if using Python)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Go binaries
+*.exe
+*.test
+*.out
+
+# Coverage reports
+coverage/
+*.coverage
+htmlcov/

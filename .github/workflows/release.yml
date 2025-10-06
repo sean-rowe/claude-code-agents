@@ -111,3 +111,74 @@ jobs:
       run: npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-homebrew:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: create-release
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Get release URL and SHA256
+      id: get_release_info
+      run: |
+        # Get tarball URL
+        TARBALL_URL="https://github.com/${{ github.repository }}/archive/${{ steps.get_version.outputs.TAG }}.tar.gz"
+        echo "TARBALL_URL=$TARBALL_URL" >> $GITHUB_OUTPUT
+
+        # Download and calculate SHA256
+        curl -sL "$TARBALL_URL" -o release.tar.gz
+        SHA256=$(sha256sum release.tar.gz | awk '{print $1}')
+        echo "SHA256=$SHA256" >> $GITHUB_OUTPUT
+        echo "SHA256: $SHA256"
+
+    - name: Update Homebrew tap
+      env:
+        HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      run: |
+        # Clone homebrew tap repository
+        git clone https://github.com/${{ github.repository_owner }}/homebrew-tap.git tap
+        cd tap
+
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Update formula
+        cat > Formula/claude-code-agents.rb << 'EOF'
+        class ClaudeCodeAgents < Formula
+          desc "BDD-driven development pipeline with Claude Code integration"
+          homepage "https://github.com/${{ github.repository }}"
+          url "${{ steps.get_release_info.outputs.TARBALL_URL }}"
+          sha256 "${{ steps.get_release_info.outputs.SHA256 }}"
+          version "${{ steps.get_version.outputs.VERSION }}"
+          license "MIT"
+
+          depends_on "jq"
+          depends_on "git"
+
+          def install
+            bin.install "pipeline.sh" => "pipeline"
+            prefix.install "README.md"
+            prefix.install Dir["docs/*"]
+          end
+
+          test do
+            system "#{bin}/pipeline", "--version"
+          end
+        end
+        EOF
+
+        # Commit and push
+        git add Formula/claude-code-agents.rb
+        git commit -m "Update claude-code-agents to ${{ steps.get_version.outputs.VERSION }}"
+        git push https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${{ github.repository_owner }}/homebrew-tap.git main

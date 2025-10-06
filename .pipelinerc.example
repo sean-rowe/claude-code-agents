@@ -1,0 +1,90 @@
+# Pipeline Configuration File
+# Copy this file to .pipelinerc to customize pipeline behavior
+#
+# Priority: Command-line flags > Environment variables > .pipelinerc > Defaults
+# Locations:
+#   1. ~/.claude/.pipelinerc (global config, loaded first)
+#   2. ./.pipelinerc (project config, overrides global)
+
+# ============================================================================
+# Core Settings
+# ============================================================================
+
+# Verbose output (0 or 1)
+# VERBOSE=0
+
+# Debug mode - very detailed logs (0 or 1)
+# DEBUG=0
+
+# Dry-run mode - preview without executing (0 or 1)
+# DRY_RUN=0
+
+# ============================================================================
+# Network & Retry Settings
+# ============================================================================
+
+# Number of retry attempts for network operations (1-10)
+# MAX_RETRIES=3
+
+# Delay in seconds between retry attempts (1-60)
+# RETRY_DELAY=2
+
+# Maximum time in seconds for long operations (30-3600)
+# OPERATION_TIMEOUT=300
+
+# ============================================================================
+# JIRA Integration
+# ============================================================================
+
+# Default JIRA project key
+# JIRA_PROJECT=PROJ
+
+# JIRA instance URL (optional - uses acli config by default)
+# JIRA_URL=https://company.atlassian.net
+
+# JIRA username (optional - uses acli config by default)
+# JIRA_USER=user@company.com
+
+# ============================================================================
+# Git Integration
+# ============================================================================
+
+# Skip git push step (0 or 1)
+# SKIP_GIT_PUSH=0
+
+# Feature branch prefix
+# GIT_BRANCH_PREFIX=feature/
+
+# Override default branch detection (leave empty for auto-detect)
+# GIT_MAIN_BRANCH=
+
+# ============================================================================
+# Logging
+# ============================================================================
+
+# Path to error log file
+# LOG_FILE=.pipeline/errors.log
+
+# Minimum log level (ERROR, WARN, INFO, DEBUG)
+# LOG_LEVEL=ERROR
+
+# ============================================================================
+# Example Configurations
+# ============================================================================
+
+# Development setup (verbose, no push)
+# VERBOSE=1
+# DEBUG=1
+# SKIP_GIT_PUSH=1
+
+# Production setup (robust retries)
+# MAX_RETRIES=5
+# RETRY_DELAY=5
+# OPERATION_TIMEOUT=600
+
+# Custom JIRA project
+# JIRA_PROJECT=MYAPP
+
+# Custom branch naming
+# GIT_BRANCH_PREFIX=story/
+# GIT_MAIN_BRANCH=develop
